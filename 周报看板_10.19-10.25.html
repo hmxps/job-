@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>周报看板 10.19-10.25</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background: #f5f5f5; color: #333; font-size: 14px; line-height: 1.5; }
+  .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+  .header { background: #fff; border: 1px solid #e0e0e0; padding: 16px 20px; margin-bottom: 16px; }
+  .header h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .header .subtitle { font-size: 12px; color: #888; }
+  .tabs { display: flex; border: 1px solid #e0e0e0; border-bottom: none; background: #fff; }
+  .tab { padding: 12px 24px; cursor: pointer; border-right: 1px solid #e0e0e0; font-size: 14px; color: #666; transition: all 0.2s; }
+  .tab:hover { background: #fafafa; }
+  .tab.active { background: #1890ff; color: #fff; font-weight: 500; }
+  .page { display: none; background: #fff; border: 1px solid #e0e0e0; padding: 20px; }
+  .page.active { display: block; }
+  .caliber-note { background: #fffbe6; border: 1px solid #ffe58f; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: #614700; line-height:1.7; }
+  .caliber-note strong { color: #d48806; }
+  .kpi-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-bottom: 20px; }
+  .kpi-row-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+  .kpi-card { background: #fff; border: 1px solid #e0e0e0; border-left: 3px solid #1890ff; padding: 12px 14px; }
+  .kpi-card.success { border-left-color: #52c41a; }
+  .kpi-card.warning { border-left-color: #faad14; }
+  .kpi-card.danger { border-left-color: #f5222d; }
+  .kpi-card.info { border-left-color: #722ed1; }
+  .kpi-card .label { font-size: 12px; color: #888; margin-bottom: 6px; }
+  .kpi-card .value { font-size: 20px; font-weight: 600; color: #333; }
+  .kpi-card .sub { font-size: 11px; color: #999; margin-top: 4px; }
+  .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px; }
+  .chart-grid-1 { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 16px; }
+  .chart-card { background: #fff; border: 1px solid #e0e0e0; padding: 14px 16px; }
+  .chart-title { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px; }
+  .title-note { font-size: 11px; font-weight: normal; color: #722ed1; background: #f9f0ff; border: 1px solid #efdbff; padding: 1px 6px; margin-left: 8px; border-radius: 2px; vertical-align: middle; }
+  .chart-desc { background: #fffbe6; border-left: 3px solid #ffd666; padding: 6px 10px; margin-bottom: 10px; font-size: 12px; color: #614700; line-height: 1.5; }
+  .chart-body { width: 100%; height: 360px; }
+  .chart-body.tall { height: 480px; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th { background: #fafafa; padding: 8px 10px; text-align: left; border-bottom: 1px solid #e0e0e0; font-weight: 500; color: #666; position: sticky; top: 0; }
+  .data-table td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
+  .data-table tr:hover td { background: #fafafa; }
+  .neg { color: #f5222d; }
+  .work-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .work-team { background: #fff; border: 1px solid #e0e0e0; border-left: 3px solid #faad14; padding: 16px 18px; margin-bottom: 16px; }
+  .work-team-header { font-size: 16px; font-weight: 600; color: #d48806; padding-bottom: 8px; border-bottom: 2px solid #faad14; margin-bottom: 12px; }
+  .work-team-items { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 28px; }
+  .work-col { background: #fff; border: 1px solid #e0e0e0; padding: 16px 18px; }
+  .work-col-header { font-size: 16px; font-weight: 600; color: #1890ff; padding-bottom: 8px; border-bottom: 2px solid #1890ff; margin-bottom: 12px; }
+  .work-col-header .role { font-size: 11px; color: #999; font-weight: normal; margin-left: 6px; }
+  .work-col-header .count { float: right; font-size: 12px; color: #999; font-weight: normal; }
+  .work-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px dashed #f0f0f0; font-size: 13px; line-height: 1.6; }
+  .work-item:last-child { border-bottom: none; }
+  .work-item-idx { flex: 0 0 20px; color: #1890ff; font-weight: 600; }
+  .work-item-main { flex: 1; }
+  .work-item-cat { color: #333; font-weight: 500; margin-bottom: 2px; }
+  .work-item-desc { color: #666; }
+  .work-tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 2px; background: #e6f7ff; color: #1890ff; margin-left: 6px; vertical-align: middle; }
+  .work-tag.ad { background: #fff7e6; color: #fa8c16; }
+  .work-tag.logistics { background: #f6ffed; color: #52c41a; }
+  .work-tag.festival { background: #fff1f0; color: #f5222d; }
+  .work-tag.report { background: #f9f0ff; color: #722ed1; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>周报数据看板（10.19 - 10.25）</h1>
+    <div class="subtitle">数据来源：10.30周报（10.19-10.25）.xlsx ｜ 生成日期：2026-10-30</div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchPage('A')">口径A：商品销售额 × 商品毛利率</div>
+    <div class="tab" onclick="switchPage('B')">口径B：总销售额 × 总毛利率</div>
+    <div class="tab" onclick="switchPage('C')">工作内容</div>
+  </div>
+  <div id="pageA" class="page active">
+    <div class="caliber-note">
+      <strong>统计口径说明：</strong>本页数据基于 Excel sheet「本周业绩（商品销售额乘以商品毛利率）」的 203 条 ASIN 明细（10.19-10.25 全周）。
+      <br>计算逻辑：销售额 = 各 ASIN 当周商品销售额之和；利润 = 商品销售额 × 商品毛利率（ASIN 级别口径）；毛利率 = 利润总额 / 销售额总额。
+      <br><strong style="color:#d48806;">10月全月利润目标完成度：</strong>10月利润目标 500000 元，10月全月累计利润 376649.31 元（10.1-10.4 利润 49228.62 + 10.5-10.11 利润 112410.49 + 10.12-10.18 利润 106959.21 + 10.19-10.25 利润 108050.99），完成度 75.33%。
+    </div>
+    <div class="kpi-row" id="kpiRowA"></div>
+    <div class="chart-grid">
+      <div class="chart-card"><div class="chart-title">① 各品类销售额与利润对比</div><div class="chart-body tall" id="chartA1"></div></div>
+      <div class="chart-card"><div class="chart-title">② 各品类销售额排名</div><div class="chart-desc">按销售额降序排列的横向条形图，条右侧标注金额。直观对比各品类销售额大小。</div><div class="chart-body tall" id="chartA2"></div></div>
+    </div>
+    
+    <!-- ============ 类目运营指标：占一整行 ============ -->
+    <div class="chart-card" style="margin-bottom:16px;">
+      <div class="chart-title">📊 类目运营指标（四周对比）</div>
+      <div class="chart-desc">从 Sheet1 提取。选一个类目 → 查看其 4 周的销量、总流量、广告曝光、广告点击变化。</div>
+
+      <!-- 筛选器 -->
+      <div id="catFilter" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
+
+      <!-- 本周 4 指标小卡 -->
+      <div id="catKpi" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;"></div>
+
+      <!-- 双图表：销量+总流量 / 点击+曝光 -->
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+        <div>
+          <div style="font-size:12px;color:#666;margin-bottom:4px;">销量（右轴）& 总流量（左轴）</div>
+          <div id="chartCatSL" style="width:100%;height:280px;"></div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:#666;margin-bottom:4px;">广告点击（右轴）& 广告曝光（左轴）</div>
+          <div id="chartCatCE" style="width:100%;height:280px;"></div>
+        </div>
+      </div>
+
+      <!-- 详细数据表 -->
+      <div id="catDetailTable" style="margin-top:14px;max-height:220px;overflow:auto;"></div>
+    </div>
+    
+    <div class="chart-grid">
+      <div class="chart-card"><div class="chart-title">③ 负责人业绩对比</div><div class="chart-body" id="chartA3"></div></div>
+      <div class="chart-card"><div class="chart-title">④ 负责人利润贡献占比</div><div class="chart-body" id="chartA4"></div></div>
+      <div class="chart-card"><div class="chart-title">⑤ 10月利润目标完成度（环形进度）</div><div class="chart-desc">蓝色弧长为已完成进度，灰色为剩余。10月利润目标 50 万元，10月全月累计已完成 37.66 万元利润，进度 75.33%。</div><div class="chart-body" id="chartA5"></div></div>
+      <div class="chart-card"><div class="chart-title">⑥ 最近5周销售额与利润变化</div><div class="chart-desc">含本周在内最近5周的销售额与利润走势，数据取自口径A sheet 右侧的趋势记录表。</div><div class="chart-body" id="chartA10"></div></div>
+      <div class="chart-card"><div class="chart-title">⑦ Top10 ASIN 销售额排名</div><div class="chart-body tall" id="chartA6"></div></div>
+      <div class="chart-card"><div class="chart-title">⑧ 亏损 ASIN 清单<span class="title-note">按 4km 毛利率判定</span></div><div class="chart-desc">亏损判定与毛利率均采用 4km 口径（4km 绝对值不精确，但每周正负方向可靠）。4km 毛利率为负的 ASIN 视为亏损。</div><div class="chart-body" id="chartA7" style="height:auto; max-height:480px; overflow:auto;"></div></div>
+    </div>
+    <div class="chart-grid-1">
+      <div class="chart-card"><div class="chart-title">⑨ 滞销产品（零销售额）分布</div><div class="chart-body" id="chartA9"></div></div>
+    </div>
+  </div>
+  <div id="pageB" class="page">
+    <div class="caliber-note">
+      <strong>统计口径说明：</strong>本页数据基于 Excel sheet「本周业绩（总销售额乘以总毛利率）」的每日数据（10.19-10.25 共 7 天）。
+      <br>计算逻辑：销售额 = 总销售额（小组/各人每日）；利润 = 总销售额 × 总毛利率；完成率 = 当日销售额 / 日均目标。
+      <br><strong style="color:#d48806;">10月全月利润目标完成度：</strong>10月利润目标 500000 元（人民币），10月全月累计利润 52052.86 美元（10.1-10.4 利润 6856.43 + 10.5-10.11 利润 15905.47 + 10.12-10.18 利润 14406.86 + 10.19-10.25 利润 14884.10），按汇率 6.733 换算为 350471.89 元人民币，月进度 70.09%。
+      <br><strong style="color:#d48806;">单位说明：</strong>本页所有金额数据单位为 <strong>美元（USD）</strong>，与口径A（人民币）不同，请勿直接对比数值大小。
+    </div>
+    <div class="kpi-row-5" id="kpiRowB"></div>
+    <div class="chart-grid">
+      <div class="chart-card"><div class="chart-title">⑩ 小组每日销售额与利润趋势</div><div class="chart-body" id="chartB1"></div></div>
+      <div class="chart-card"><div class="chart-title">⑪ 小组每日完成率趋势</div><div class="chart-desc">100% 为达标基准线，低于 100% 为未达标。</div><div class="chart-body" id="chartB2"></div></div>
+      <div class="chart-card"><div class="chart-title">⑫ 各人员每日销售额对比</div><div class="chart-body" id="chartB3"></div></div>
+      <div class="chart-card"><div class="chart-title">⑬ 各人员每日完成率对比</div><div class="chart-desc">100% 为达标基准线。完成率持续偏高者目标可上调，多数未达标者目标可下调，辅助调整目标值。</div><div class="chart-body" id="chartB4"></div></div>
+      <div class="chart-card"><div class="chart-title">⑭ 10月利润目标完成度（环形进度）</div><div class="chart-desc">蓝色弧长为已完成进度，灰色为剩余。10月利润目标 50 万元人民币，10月全月累计利润换算后为 35.05 万元，进度 70.09%。</div><div class="chart-body" id="chartB5"></div></div>
+      <div class="chart-card"><div class="chart-title">⑮ 人员销售额占比 vs 利润占比</div><div class="chart-desc">利润占比 &gt; 销售额占比说明该人产品毛利率更高，反之说明毛利率偏低。可据此识别高毛利/低毛利贡献者。</div><div class="chart-body" id="chartB6"></div></div>
+    </div>
+  </div>
+  <div id="pageC" class="page">
+    <div class="caliber-note">
+      <strong>工作内容说明：</strong>本页展示负责人本周工作内容（已按「原文 → 精简标题；分类标签」整理）。每条含精简标题与一个或多个分类标签。
+      <br>数据来源：10.30周报（10.19-10.25）.xlsx → sheet「工作内容」。
+      <br>标签分类：<span class="work-tag">默认</span><span class="work-tag ad">广告</span><span class="work-tag logistics">物流</span><span class="work-tag festival">节日营销</span><span class="work-tag report">汇报</span>
+    </div>
+    <div id="teamWorkBox"></div>
+    <div class="work-grid" id="workGrid"></div>
+  </div>
+</div>
+<script>
+var DATA = {"week":"10.19-10.25","lastWeek":"10.12-10.18","monthLabel":"10月","weekLabels":["10.1-10.4","10.5-10.11","10.12-10.18","10.19-10.25"],"categoryMetrics":[{"week":"9.28-10.4","categories":[{"name":"Switch2充电器","traffic":0,"exposure":0,"clicks":0,"sales":0},{"name":"Switch2收纳包,Switch2保护壳","traffic":226,"exposure":39438,"clicks":165,"sales":26},{"name":"磁力方块","traffic":3458,"exposure":461584,"clicks":1723,"sales":155},{"name":"电容笔","traffic":0,"exposure":0,"clicks":0,"sales":0},{"name":"翻译耳机","traffic":16,"exposure":2136,"clicks":14,"sales":0},{"name":"轨道车","traffic":313,"exposure":22439,"clicks":164,"sales":13},{"name":"键盘","traffic":4943,"exposure":227352,"clicks":1794,"sales":492},{"name":"键鼠套装","traffic":11929,"exposure":851220,"clicks":5425,"sales":1328},{"name":"蜡烛灯","traffic":10689,"exposure":816861,"clicks":4512,"sales":934},{"name":"幕布","traffic":2271,"exposure":84373,"clicks":978,"sales":93},{"name":"手写板","traffic":1619,"exposure":183946,"clicks":727,"sales":166},{"name":"鼠标","traffic":10625,"exposure":725897,"clicks":3953,"sales":2497},{"name":"鼠标垫","traffic":2549,"exposure":107099,"clicks":804,"sales":793},{"name":"数字键盘","traffic":895,"exposure":18626,"clicks":133,"sales":206},{"name":"止吠器","traffic":42,"exposure":4063,"clicks":25,"sales":2},{"name":"桌垫","traffic":23,"exposure":1706,"clicks":15,"sales":5}]},{"week":"10.5-10.11","categories":[{"name":"Switch2充电器","traffic":1,"exposure":0,"clicks":0,"sales":0},{"name":"Switch2收纳包,Switch2保护壳","traffic":209,"exposure":89841,"clicks":205,"sales":36},{"name":"磁力方块","traffic":2610,"exposure":290129,"clicks":1446,"sales":251},{"name":"电容笔","traffic":0,"exposure":0,"clicks":0,"sales":0},{"name":"翻译耳机","traffic":17,"exposure":3084,"clicks":14,"sales":0},{"name":"轨道车","traffic":259,"exposure":52215,"clicks":566,"sales":56},{"name":"键盘","traffic":4210,"exposure":236220,"clicks":1785,"sales":465},{"name":"键鼠套装","traffic":10749,"exposure":1145792,"clicks":6030,"sales":1287},{"name":"蜡烛灯","traffic":10091,"exposure":1213796,"clicks":6731,"sales":1194},{"name":"幕布","traffic":1439,"exposure":139429,"clicks":1346,"sales":92},{"name":"手写板","traffic":1363,"exposure":244816,"clicks":865,"sales":233},{"name":"鼠标","traffic":7639,"exposure":827010,"clicks":3944,"sales":2085},{"name":"鼠标垫","traffic":2054,"exposure":114870,"clicks":794,"sales":811},{"name":"数字键盘","traffic":880,"exposure":64189,"clicks":214,"sales":264},{"name":"止吠器","traffic":39,"exposure":5357,"clicks":36,"sales":2},{"name":"桌垫","traffic":16,"exposure":3368,"clicks":19,"sales":0}]},{"week":"10.12-10.18","categories":[{"name":"Switch2充电器","traffic":3,"exposure":98,"clicks":1,"sales":0},{"name":"Switch2收纳包,Switch2保护壳","traffic":65,"exposure":15632,"clicks":58,"sales":15},{"name":"磁力方块","traffic":564,"exposure":108521,"clicks":727,"sales":131},{"name":"电容笔","traffic":0,"exposure":0,"clicks":0,"sales":0},{"name":"翻译耳机","traffic":6,"exposure":2179,"clicks":5,"sales":0},{"name":"轨道车","traffic":509,"exposure":31435,"clicks":370,"sales":40},{"name":"键盘","traffic":2671,"exposure":205640,"clicks":1902,"sales":480},{"name":"键鼠套装","traffic":6897,"exposure":749155,"clicks":4944,"sales":1234},{"name":"蜡烛灯","traffic":10104,"exposure":1334073,"clicks":7953,"sales":1670},{"name":"幕布","traffic":859,"exposure":83645,"clicks":714,"sales":49},{"name":"手写板","traffic":858,"exposure":191838,"clicks":761,"sales":147},{"name":"鼠标","traffic":4342,"exposure":627611,"clicks":3268,"sales":1934},{"name":"鼠标垫","traffic":1486,"exposure":100055,"clicks":849,"sales":764},{"name":"数字键盘","traffic":637,"exposure":36462,"clicks":202,"sales":209},{"name":"止吠器","traffic":15,"exposure":3350,"clicks":18,"sales":0},{"name":"桌垫","traffic":7,"exposure":1702,"clicks":10,"sales":0}]},{"week":"10.19-10.25","categories":[{"name":"Switch2充电器","traffic":0,"exposure":150,"clicks":0,"sales":0},{"name":"Switch2收纳包,Switch2保护壳","traffic":106,"exposure":7948,"clicks":57,"sales":18},{"name":"磁力方块","traffic":2005,"exposure":344123,"clicks":1889,"sales":205},{"name":"电容笔","traffic":0,"exposure":0,"clicks":0,"sales":0},{"name":"翻译耳机","traffic":4,"exposure":2918,"clicks":7,"sales":0},{"name":"轨道车","traffic":283,"exposure":88900,"clicks":701,"sales":25},{"name":"键盘","traffic":3045,"exposure":239742,"clicks":1696,"sales":441},{"name":"键鼠套装","traffic":7160,"exposure":918501,"clicks":4928,"sales":1036},{"name":"蜡烛灯","traffic":10787,"exposure":1673608,"clicks":9236,"sales":1846},{"name":"幕布","traffic":403,"exposure":29215,"clicks":224,"sales":28},{"name":"手写板","traffic":782,"exposure":191189,"clicks":658,"sales":128},{"name":"鼠标","traffic":5125,"exposure":647025,"clicks":3384,"sales":2199},{"name":"鼠标垫","traffic":1634,"exposure":97113,"clicks":777,"sales":769},{"name":"数字键盘","traffic":622,"exposure":20747,"clicks":139,"sales":155},{"name":"止吠器","traffic":27,"exposure":4255,"clicks":26,"sales":3},{"name":"桌垫","traffic":8,"exposure":3585,"clicks":15,"sales":2}]}],"categoryNames":["Switch2充电器","Switch2收纳包,Switch2保护壳","磁力方块","电容笔","翻译耳机","轨道车","键盘","键鼠套装","蜡烛灯","幕布","手写板","鼠标","鼠标垫","数字键盘","止吠器","桌垫"],"workContent":[{"name":"王超超","items":[{"cat":"上周利润统计与周报","desc":"完成上周利润统计并输出周报。","tags":["report"]},{"cat":"每日利润销量统计","desc":"每日统计利润与销量。","tags":["report"]},{"cat":"优秀链接筛选","desc":"每日筛选优秀链接，整理两个视频和两个图片。","tags":[]},{"cat":"樱花峡谷磁力方块搭建","desc":"完成樱花峡谷磁力方块搭建。","tags":[]},{"cat":"主卖产品价格库存维护","desc":"更新主卖产品价格与库存维护表。","tags":["logistics"]},{"cat":"冗余库存汇总表","desc":"整理冗余库存汇总表。","tags":["logistics"]},{"cat":"秒杀汇总表交接","desc":"完成秒杀汇总表任务交接。","tags":["festival"]},{"cat":"春秋德国发货","desc":"完成春秋德国发货1票。","tags":["logistics"]},{"cat":"发货记录型号表","desc":"制作发货记录产品型号表。","tags":["logistics"]},{"cat":"评论合并与产品信息完善","desc":"完成主体评论合并，并更新产品信息完善表。","tags":[]}]},{"name":"李燕","items":[{"cat":"账户绩效检查","desc":"完成账户绩效检查。","tags":[]},{"cat":"货件跟踪与税单登记","desc":"跟进货件跟踪，上传IEN，收集税单并完成查验登记。","tags":["logistics"]},{"cat":"UK秒杀汇总","desc":"更新UK秒杀情况汇总。","tags":["festival"]},{"cat":"清货广告与冗余汇总","desc":"跟进清货与广告，并汇总冗余情况。","tags":["logistics","ad"]},{"cat":"旺季产品数据汇总","desc":"汇总旺季产品数据。","tags":["report"]},{"cat":"德国103粉预留调查","desc":"开Case调查德国103粉预留数量。","tags":["logistics"]},{"cat":"熔岩磁力方块A+上传","desc":"上传熔岩磁力方块A+。","tags":[]},{"cat":"发货与报关","desc":"完成致和DE103、致新键鼠、春秋蜡烛灯发货及报关。","tags":["logistics"]},{"cat":"春秋UK翻新改价","desc":"完成春秋UK所有翻新产品改价。","tags":[]},{"cat":"UK变体关系重组","desc":"修改并重组UK链接变体关系。","tags":[]}]},{"name":"郑春燕","items":[{"cat":"DE遥控茶灯圣诞推广","desc":"DE遥控茶灯：万圣节广告已关闭，重点转向圣诞节推广，保留少量广告稳定产品词位置。","tags":["ad","festival"]},{"cat":"DE茶灯圣诞推广与圣诞蜡广告","desc":"DE茶灯组合：遥控茶灯、圣诞、充电茶灯万圣节广告已关闭，重点转向圣诞节推广，少量广告稳定茶灯产品词；新增圣诞蜡广告，主攻圣诞方向。","tags":["ad","festival"]},{"cat":"FR茶灯圣诞推广与圣诞蜡广告","desc":"FR茶灯组合：遥控茶灯、圣诞、充电茶灯万圣节广告已关闭，重点转向圣诞节推广，少量广告稳定茶灯产品词；新增圣诞蜡广告，主攻圣诞方向。","tags":["ad","festival"]},{"cat":"DE充电茶灯产品词与圣诞词推广","desc":"DE充电茶灯：万圣节推广已全部关闭，加大产品词推广，目前主要位于第二、第三页，目标11月10日推至第一页；圣诞方向词以低价和关联广告为主。","tags":["ad","festival"]},{"cat":"DE圣诞蜡价格与关键词推广","desc":"DE圣诞蜡：市场竞争卷价格，已出现30支18.99超低价，采取降价推广加错关键词推广，并拓展其他站点流量词。","tags":["ad","festival"]},{"cat":"FR圣诞蜡圣诞词推排名","desc":"FR圣诞蜡：广告主要投放圣诞相关词，已出现自然位，多位于第三页，目标大促前推至第一页。","tags":["ad","festival"]},{"cat":"ES圣诞蜡圣诞词推排名","desc":"ES圣诞蜡：广告主要投放圣诞相关词，已出现自然位，多位于第三页，目标大促前推至第一页。","tags":["ad","festival"]},{"cat":"DE 6支长杆广告调整","desc":"DE 6支长杆：链接开始销售新供应商货，重新调整广告，关键词集中在长杆产品词和圣诞装饰。","tags":["ad","festival"]},{"cat":"充电茶灯FR/ES广告跟进","desc":"充电茶灯FR/ES：广告跟进与调整，原内容未详述。","tags":["ad"]},{"cat":"清理产品价格与广告调整","desc":"清理产品：致和键鼠降低价格并调整广告；TM004降价、参加活动并投放广告小词；魔法棒正常售卖；火烈鸟犬吠器和翻译耳机采用低价折扣加低价广告；KF007键鼠保持正常动销，维持相对低价加价格折扣。","tags":["ad","logistics"]}]},{"name":"张志鹏","items":[{"cat":"轨道火车英国秒杀恢复","desc":"轨道火车英国站已恢复秒杀资格，等货到后开始跑秒杀。","tags":["festival","logistics"]},{"cat":"轨道火车欧洲转化观察","desc":"轨道火车欧洲站点已跑出数据，有曝光但转化低，初步怀疑价格问题，已调至相对低价继续观察转化率。","tags":["ad"]},{"cat":"轨道火车欧洲广告搭建","desc":"轨道火车欧洲计划推广DE、IT、ES，DE和IT广告框架已设置，广告组已添加视频广告及ASIN定投，后续继续调整细节。","tags":["ad"]},{"cat":"打孔幕布欧洲清货与DOTD","desc":"打孔幕布欧洲站点月度仓储费过高，需促销降价清货；法国站已申报下周DOTD，其余站点暂无申报资格，下周打Coupon对比市场清货。","tags":["logistics","festival"]}]}],"teamWork":{"name":"小组工作事项","items":[{"cat":"冗余库存分类","desc":"完成冗余库存分类。","tags":["logistics"]},{"cat":"手写板清货XZ方案","desc":"安排手写板清货XZ方案。","tags":["logistics"]},{"cat":"幕布与轨道车促销推广跟进","desc":"跟进幕布与轨道车促销及推广情况。","tags":["ad","festival"]},{"cat":"充电蜡烛灯/100pc磁力方块/M01鼠标推广调整","desc":"推进充电蜡烛灯、100pc磁力方块、M01鼠标的推广与调整。","tags":["ad"]},{"cat":"子体合并与链接变体处理","desc":"合并单独子体，处理整体链接变体情况。","tags":[]},{"cat":"英国冗余翻新产品低价处理","desc":"低价处理英国冗余翻新产品。","tags":["logistics"]},{"cat":"长期仓储费库存处理","desc":"处理长期仓储费库存。","tags":["logistics"]},{"cat":"蜡烛灯/磁力方块推广与KF10/M01降广告","desc":"调整蜡烛灯、磁力方块推广广告，并降低KF10键鼠、M01鼠标广告。","tags":["ad"]},{"cat":"欧洲蜡烛灯推进与西班牙第一目标","desc":"推进欧洲蜡烛灯，目标西班牙蜡烛灯排名第一。","tags":["ad"]}]},"calibreA":{"details":[{"person":"郑春燕","category":"蜡烛灯","asin":"B0DLGQZS5H","sales":91687.37,"profit":16925.488502,"margin4km":0.003186,"marginCaptain":0.1846},{"person":"高杰","category":"鼠标","asin":"B0H8D845TK","sales":55929.64,"profit":3104.09502,"margin4km":0.002216,"marginCaptain":0.0555},{"person":"高杰","category":"键鼠套装","asin":"B0GHQVCB42","sales":52955.17,"profit":11824.889461,"margin4km":0.003406,"marginCaptain":0.2233},{"person":"高杰","category":"蜡烛灯","asin":"B0HCNSL6MV","sales":52032.45,"profit":4880.64381,"margin4km":0.00328,"marginCaptain":0.0938},{"person":"高杰","category":"键鼠套装","asin":"B086Z946T5","sales":45763.72,"profit":7363.382548,"margin4km":0.0032779999999999997,"marginCaptain":0.1609},{"person":"郑春燕","category":"键鼠套装","asin":"B0H4KV75M2","sales":44858.14,"profit":7177.3024,"margin4km":0.0027010000000000003,"marginCaptain":0.16},{"person":"高杰","category":"磁力方块","asin":"B0FXX162GS","sales":35820.28,"profit":4126.496256,"margin4km":0.0051270000000000005,"marginCaptain":0.1152},{"person":"高杰","category":"鼠标","asin":"B0H9L5ZNT4","sales":28156.57,"profit":4493.788572,"margin4km":0.0032740000000000004,"marginCaptain":0.1596},{"person":"高杰","category":"鼠标","asin":"B0H8RTZZ1S","sales":27167.53,"profit":2512.996525,"margin4km":0.002156,"marginCaptain":0.0925},{"person":"高杰","category":"鼠标垫","asin":"B0B1ZXWFMZ","sales":25792.75,"profit":3685.783975,"margin4km":0.0038,"marginCaptain":0.1429},{"person":"郑春燕","category":"蜡烛灯","asin":"B0HCBP9Y3P","sales":25293.24,"profit":1163.48904,"margin4km":0.0022500000000000003,"marginCaptain":0.046},{"person":"郑春燕","category":"鼠标","asin":"B0HDP244HR","sales":23982.34,"profit":3832.377932,"margin4km":0.002973,"marginCaptain":0.1598},{"person":"高杰","category":"键鼠套装","asin":"B0GQ3BWC55","sales":19870.63,"profit":3660.170046,"margin4km":0.0035770000000000003,"marginCaptain":0.1842},{"person":"郑春燕","category":"蜡烛灯","asin":"B0DM8JQ2QP","sales":19431.38,"profit":2050.01059,"margin4km":0.003537,"marginCaptain":0.1055},{"person":"郑春燕","category":"蜡烛灯","asin":"B0H5JX1YMY","sales":18528.42,"profit":833.7789,"margin4km":0.0016120000000000002,"marginCaptain":0.045},{"person":"高杰","category":"键鼠套装","asin":"B0C6MF4C4C","sales":17782.88,"profit":1924.107616,"margin4km":0.002987,"marginCaptain":0.1082},{"person":"高杰","category":"鼠标","asin":"B0H9LGXG4N","sales":17732.38,"profit":2361.953016,"margin4km":0.003125,"marginCaptain":0.1332},{"person":"郑春燕","category":"蜡烛灯","asin":"B0HBWMKHBF","sales":14136.99,"profit":2064.00054,"margin4km":0.003058,"marginCaptain":0.146},{"person":"高杰","category":"鼠标","asin":"B0GTLSXNPG","sales":13288.65,"profit":2178.009735,"margin4km":0.003602,"marginCaptain":0.1639},{"person":"高杰","category":"键盘","asin":"B0GMWYFF7C","sales":13275.3,"profit":461.98044,"margin4km":0.002179,"marginCaptain":0.0348},{"person":"郑春燕","category":"键鼠套装","asin":"B0CKPKXZ4Q","sales":12574.9,"profit":2291.14678,"margin4km":0.003569,"marginCaptain":0.1822},{"person":"郑春燕","category":"键鼠套装","asin":"B0F9JZWJW3","sales":11283.31,"profit":2234.09538,"margin4km":0.002402,"marginCaptain":0.198},{"person":"郑春燕","category":"键盘","asin":"B0H4G1LJLN","sales":10543.78,"profit":1120.803814,"margin4km":0.003968,"marginCaptain":0.1063},{"person":"郑春燕","category":"键鼠套装","asin":"B0GQ9F99TR","sales":10497.87,"profit":1611.423045,"margin4km":0.004062,"marginCaptain":0.1535},{"person":"高杰","category":"键盘","asin":"B0CLDQ12LH","sales":10476.19,"profit":76.476187,"margin4km":0.002376,"marginCaptain":0.0073},{"person":"郑春燕","category":"数字键盘","asin":"B0H8CXSY5P","sales":9807.4,"profit":3031.46734,"margin4km":0.004292000000000001,"marginCaptain":0.3091},{"person":"高杰","category":"键盘","asin":"B0CN8SM8B7","sales":9436.53,"profit":3111.223941,"margin4km":0.0036320000000000002,"marginCaptain":0.3297},{"person":"郑春燕","category":"键盘","asin":"B0GQF6RMYL","sales":8536.55,"profit":617.192565,"margin4km":0.0037730000000000003,"marginCaptain":0.0723},{"person":"高杰","category":"磁力方块","asin":"B0DLK6QGBV","sales":8531.77,"profit":-1435.043714,"margin4km":0.0018110000000000001,"marginCaptain":-0.1682},{"person":"郑春燕","category":"蜡烛灯","asin":"B0DN631M93","sales":7754.64,"profit":697.9176,"margin4km":0.002337,"marginCaptain":0.09},{"person":"郑春燕","category":"键盘","asin":"B0HB9GT29G","sales":7363.16,"profit":1323.896168,"margin4km":0.003523,"marginCaptain":0.1798},{"person":"高杰","category":"数字键盘","asin":"B0GGGLP8SF","sales":6021.74,"profit":2562.852544,"margin4km":0.005195999999999999,"marginCaptain":0.4256},{"person":"高杰","category":"键盘","asin":"B0H68XJZ97","sales":5542.75,"profit":430.1174,"margin4km":0.002926,"marginCaptain":0.0776},{"person":"郑春燕","category":"鼠标垫","asin":"B0D12KC5YZ","sales":5403.5,"profit":1392.48195,"margin4km":0.003414,"marginCaptain":0.2577},{"person":"郑春燕","category":"键鼠套装","asin":"B0BYC51TCD","sales":5252.61,"profit":1128.260628,"margin4km":0.004222,"marginCaptain":0.2148},{"person":"张志鹏","category":"幕布","asin":"B0HGWRN392","sales":4862.18,"profit":974.86709,"margin4km":0.005994,"marginCaptain":0.2005},{"person":"郑春燕","category":"键鼠套装","asin":"B0H3VDNYBC","sales":4557.72,"profit":603.442128,"margin4km":0.0023669999999999997,"marginCaptain":0.1324},{"person":"高杰","category":"蜡烛灯","asin":"B0CN8X62ZB","sales":4305.91,"profit":-3907.182734,"margin4km":0.0022270000000000002,"marginCaptain":-0.9074},{"person":"高杰","category":"键鼠套装","asin":"B0DBYY6F3N","sales":4243.45,"profit":-381.9105,"margin4km":0.001803,"marginCaptain":-0.09},{"person":"高杰","category":"鼠标","asin":"B0HHH8RF1R","sales":3691.4,"profit":962.71712,"margin4km":0.00443,"marginCaptain":0.2608},{"person":"张志鹏","category":"轨道车","asin":"B0GRTNJ52G","sales":3675.87,"profit":-1761.844491,"margin4km":0.001002,"marginCaptain":-0.4793},{"person":"高杰","category":"键盘","asin":"B0B9GQJQW6","sales":3621.93,"profit":825.80004,"margin4km":0.0036049999999999997,"marginCaptain":0.228},{"person":"张志鹏","category":"手写板","asin":"B0GMYNYYCJ","sales":3326.54,"profit":-359.598974,"margin4km":0.0008690000000000001,"marginCaptain":-0.1081},{"person":"高杰","category":"键鼠套装","asin":"B0H9X72V3J","sales":2907.08,"profit":389.258012,"margin4km":0.003202,"marginCaptain":0.1339},{"person":"李燕","category":"蜡烛灯","asin":"B0CDKXJ7NM","sales":2904.74,"profit":1306.261578,"margin4km":0.0054459999999999995,"marginCaptain":0.4497},{"person":"郑春燕","category":"鼠标","asin":"B0H5BBJV9S","sales":2819.87,"profit":92.209749,"margin4km":0.00147,"marginCaptain":0.0327},{"person":"郑春燕","category":"键盘","asin":"B0FG2TX7DJ","sales":2726.47,"profit":-54.5294,"margin4km":0.0014269999999999999,"marginCaptain":-0.02},{"person":"郑春燕","category":"鼠标","asin":"B0H5BKJ79V","sales":2277.88,"profit":1082.448576,"margin4km":0.003498,"marginCaptain":0.4752},{"person":"高杰","category":"鼠标","asin":"B0BBZ5B2CZ","sales":2260.07,"profit":1036.016088,"margin4km":0.005442,"marginCaptain":0.4584},{"person":"张志鹏","category":"轨道车","asin":"B0GWCTR33H","sales":2072.59,"profit":-454.518987,"margin4km":0.005583,"marginCaptain":-0.2193},{"person":"郑春燕","category":"蜡烛灯","asin":"B0GSVSYQ1W","sales":2026.54,"profit":552.434804,"margin4km":0.004288,"marginCaptain":0.2726},{"person":"郑春燕","category":"键鼠套装","asin":"B0D841RYZR","sales":1778.5,"profit":51.5765,"margin4km":0.0014399999999999999,"marginCaptain":0.029},{"person":"李燕","category":"鼠标","asin":"B0D2NG2W8X","sales":1650.54,"profit":933.710478,"margin4km":0.005941999999999999,"marginCaptain":0.5657},{"person":"张志鹏","category":"手写板","asin":"B0GDWTM3D4","sales":1531.59,"profit":198.647223,"margin4km":0.002322,"marginCaptain":0.1297},{"person":"郑春燕","category":"键鼠套装","asin":"B0CSW2P5TY","sales":1419.7,"profit":201.88134,"margin4km":0.002414,"marginCaptain":0.1422},{"person":"张志鹏","category":"手写板","asin":"B0GG92SX2Q","sales":1276.33,"profit":363.75405,"margin4km":0.0029409999999999996,"marginCaptain":0.285},{"person":"张志鹏","category":"轨道车","asin":"B0GRTNJ52G","sales":1171.89,"profit":-667.860111,"margin4km":0.0018210000000000001,"marginCaptain":-0.5699},{"person":"张志鹏","category":"手写板","asin":"B0CPWK6D77","sales":1171.21,"profit":-162.446827,"margin4km":0.001461,"marginCaptain":-0.1387},{"person":"高杰","category":"Switch2收纳包,Switch2保护壳","asin":"B0FRRGNY7F","sales":1163.06,"profit":-844.730478,"margin4km":0.0012690000000000002,"marginCaptain":-0.7263},{"person":"高杰","category":"鼠标","asin":"B0GHQVHHYN","sales":1147.99,"profit":169.90252,"margin4km":0.003503,"marginCaptain":0.148},{"person":"高杰","category":"键盘","asin":"B0D1FZBRHM","sales":798.23,"profit":-93.472733,"margin4km":0.002318,"marginCaptain":-0.1171},{"person":"高杰","category":"手写板","asin":"B09L6KHPBX","sales":741.78,"profit":-41.688036,"margin4km":0.004801000000000001,"marginCaptain":-0.0562},{"person":"郑春燕","category":"鼠标","asin":"B0BBZ5B2CZ","sales":720.67,"profit":142.116124,"margin4km":0.002793,"marginCaptain":0.1972},{"person":"张志鹏","category":"手写板","asin":"B0GF1KZFPF","sales":675.44,"profit":-37.82464,"margin4km":-0.00055,"marginCaptain":-0.056},{"person":"张志鹏","category":"轨道车","asin":"B0GRTNJ52G","sales":646.06,"profit":-97.87809,"margin4km":-0.00037600000000000003,"marginCaptain":-0.1515},{"person":"张志鹏","category":"幕布","asin":"B0HGWGH57W","sales":628.16,"profit":-91.836992,"margin4km":-0.012034,"marginCaptain":-0.1462},{"person":"高杰","category":"键盘","asin":"B0C3BZX6WB","sales":588.94,"profit":114.077678,"margin4km":0.002994,"marginCaptain":0.1937},{"person":"郑春燕","category":"键鼠套装","asin":"B0D2VL5CSN","sales":450.69,"profit":35.379165,"margin4km":0.001557,"marginCaptain":0.0785},{"person":"高杰","category":"键鼠套装","asin":"B0HNK4C5B3","sales":408.99,"profit":0.449889,"margin4km":0.005397,"marginCaptain":0.0011},{"person":"郑春燕","category":"鼠标","asin":"B0F2HYXB52","sales":385.02,"profit":-104.34042,"margin4km":0.0008759999999999999,"marginCaptain":-0.271},{"person":"张志鹏","category":"幕布","asin":"B0HHN6MMBQ","sales":360.52,"profit":2.956264,"margin4km":0.002157,"marginCaptain":0.0082},{"person":"张志鹏","category":"手写板","asin":"B0F22WY3G1","sales":322.8,"profit":-45.48252,"margin4km":-0.002343,"marginCaptain":-0.1409},{"person":"李燕","category":"鼠标","asin":"B0FCRRCXW1","sales":307.67,"profit":149.312251,"margin4km":0.0051400000000000005,"marginCaptain":0.4853},{"person":"李燕","category":"鼠标垫","asin":"B0H5W2K3JL","sales":306.97,"profit":219.023095,"margin4km":0.0064800000000000005,"marginCaptain":0.7135},{"person":"郑春燕","category":"止吠器","asin":"B0FGXJSPRP","sales":305.45,"profit":72.422195,"margin4km":0.002371,"marginCaptain":0},{"person":"高杰","category":"键盘","asin":"B0HBBG51C5","sales":269.16,"profit":48.556464,"margin4km":0.002952,"marginCaptain":0.1804},{"person":"郑春燕","category":"蜡烛灯","asin":"B0GSVSYQ1W","sales":255.33,"profit":57.653514,"margin4km":0.0014089999999999999,"marginCaptain":0.2258},{"person":"张志鹏","category":"手写板","asin":"B0GVYK6TTK","sales":180.19,"profit":-4.14437,"margin4km":0.003003,"marginCaptain":-0.023},{"person":"高杰","category":"键鼠套装","asin":"B0C3GN1YFD","sales":179.41,"profit":22.336545,"margin4km":0.0028610000000000003,"marginCaptain":0.1245},{"person":"张志鹏","category":"幕布","asin":"B0CX7PGNYJ","sales":175.6,"profit":-189.08608,"margin4km":0.003687,"marginCaptain":-1.0768},{"person":"李燕","category":"数字键盘","asin":"B0DG1TQXYM","sales":162.11,"profit":62.639304,"margin4km":0.00207,"marginCaptain":0.3864},{"person":"郑春燕","category":"止吠器","asin":"B0F6MQPW5L","sales":150.21,"profit":0.165231,"margin4km":0.005461000000000001,"marginCaptain":0.0011},{"person":"郑春燕","category":"桌垫","asin":"B0B21GHMVR","sales":150.13,"profit":8.152059,"margin4km":0.00256,"marginCaptain":0.0543},{"person":"李燕","category":"磁力方块","asin":"B0GXK9MRXG","sales":138.77,"profit":-75.324356,"margin4km":0.0037519999999999997,"marginCaptain":-0.5428},{"person":"李燕","category":"鼠标","asin":"B08L77P4D5","sales":137.05,"profit":-3.467365,"margin4km":0.0059099999999999995,"marginCaptain":-0.0253},{"person":"张志鹏","category":"手写板","asin":"B0GD1B21DQ","sales":120.07,"profit":28.636695,"margin4km":0.004139,"marginCaptain":0.2385},{"person":"张志鹏","category":"幕布","asin":"B0D59DGQXJ","sales":117.9,"profit":-145.9602,"margin4km":0.004013,"marginCaptain":-1.238},{"person":"郑春燕","category":"鼠标垫","asin":"B0GHTQBDZ6","sales":99.79,"profit":-74.213823,"margin4km":0.000882,"marginCaptain":-0.7437},{"person":"李燕","category":"鼠标","asin":"B0DBN4JN52","sales":80.52,"profit":86.059776,"margin4km":0.008634,"marginCaptain":1.0688},{"person":"张志鹏","category":"手写板","asin":"B0DM26VJP7","sales":60.04,"profit":21.212132,"margin4km":0.004116,"marginCaptain":0.3533},{"person":"张志鹏","category":"手写板","asin":"B0DM4SKHNL","sales":54.03,"profit":6.624078,"margin4km":0.00745,"marginCaptain":0.1226},{"person":"李燕","category":"手写板","asin":"B09XVK9JWT","sales":36.09,"profit":18.073872,"margin4km":0.0058850000000000005,"marginCaptain":0.5008},{"person":"李燕","category":"鼠标垫","asin":"B08LBD6MQR","sales":34.37,"profit":-9.496431,"margin4km":0.005078,"marginCaptain":-0.2763},{"person":"张志鹏","category":"手写板","asin":"B08YD84DFV","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"数字键盘","asin":"B0825MZ6N7","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"蜡烛灯","asin":"B08L13CQ68","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"蜡烛灯","asin":"B08L1437G8","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.0967},{"person":"高杰","category":"手写板","asin":"B0948PCT8Q","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.3296},{"person":"李燕","category":"蜡烛灯","asin":"B08HQCP3RM","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.2709},{"person":"高杰","category":"蜡烛灯","asin":"B0B9SGTGNS","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"鼠标","asin":"B0BBZ5B2CZ","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.4584},{"person":"张志鹏","category":"手写板","asin":"B0CG5ZC7XV","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.1358},{"person":"高杰","category":"手写板","asin":"B0CL4PHVN1","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.0887},{"person":"郑春燕","category":"键鼠套装","asin":"B0CQLKH5YN","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"张志鹏","category":"幕布","asin":"B0CDZQ3JX9","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"张志鹏","category":"手写板","asin":"B0CZ9GFNPW","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.1808},{"person":"张志鹏","category":"手写板","asin":"B0D545653Z","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.3678},{"person":"张志鹏","category":"幕布","asin":"B0D59DGQXJ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.2034},{"person":"高杰","category":"鼠标","asin":"B0BBZ5B2CZ","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.4584},{"person":"张志鹏","category":"幕布","asin":"B0D8RQNZ7T","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.4925},{"person":"张志鹏","category":"幕布","asin":"B0D59DGQXJ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.2034},{"person":"李燕","category":"蜡烛灯","asin":"B0DBRKFDCL","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"键盘","asin":"B0C9C56QXQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.15},{"person":"郑春燕","category":"键盘","asin":"B0C9C56QXQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.15},{"person":"郑春燕","category":"键盘","asin":"B0C9C56QXQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.15},{"person":"郑春燕","category":"键盘","asin":"B0C9C56QXQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.15},{"person":"李燕","category":"鼠标","asin":"B0DF916PWJ","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"键盘","asin":"B0C9C56QXQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.15},{"person":"郑春燕","category":"键盘","asin":"B0C9C56QXQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.15},{"person":"郑春燕","category":"键盘","asin":"B0C9C56QXQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.15},{"person":"郑春燕","category":"键盘","asin":"B0C9C56QXQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.15},{"person":"郑春燕","category":"键盘","asin":"B0C9C56QXQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.15},{"person":"郑春燕","category":"键鼠套装","asin":"B0DLNH93YM","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.1883},{"person":"张志鹏","category":"手写板","asin":"B0DM73KG3R","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"张志鹏","category":"手写板","asin":"B0DM5WK6YB","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.2915},{"person":"张志鹏","category":"手写板","asin":"B0DM8389J2","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"张志鹏","category":"手写板","asin":"B0DM944H9Q","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.3884},{"person":"郑春燕","category":"键盘","asin":"B0C9C56QXQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.15},{"person":"郑春燕","category":"蜡烛灯","asin":"B0CZ735CWW","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"蜡烛灯","asin":"B0CZ735CWW","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"键盘","asin":"B0C9C56QXQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.15},{"person":"郑春燕","category":"蜡烛灯","asin":"B0CZ735CWW","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"张志鹏","category":"手写板","asin":"B0DNMNGZMN","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.3884},{"person":"张志鹏","category":"手写板","asin":"B0DNMNGZMN","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.3884},{"person":"郑春燕","category":"键盘","asin":"B0C9C56QXQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.15},{"person":"高杰","category":"鼠标","asin":"B0BBZ5B2CZ","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.4584},{"person":"郑春燕","category":"鼠标垫","asin":"B0F4JQ64WY","sales":0,"profit":0,"margin4km":null,"marginCaptain":-1.0028},{"person":"郑春燕","category":"止吠器","asin":"B0F6MNYDYM","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.0456},{"person":"高杰","category":"翻译耳机","asin":"B0F6VL4CC2","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.4503},{"person":"张志鹏","category":"幕布","asin":"B0F9XYSTGQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.0675},{"person":"高杰","category":"鼠标","asin":"B0BBZ5B2CZ","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.4584},{"person":"郑春燕","category":"键鼠套装","asin":"B0B8NK1B2J","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"蜡烛灯","asin":"B0CZ735CWW","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"翻译耳机","asin":"B0FKFMRDXZ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.4238},{"person":"高杰","category":"Switch2充电器","asin":"B0FZKJ3DRW","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.3627},{"person":"高杰","category":"蜡烛灯","asin":"B0G13HF8TC","sales":0,"profit":0,"margin4km":null,"marginCaptain":-1.4612},{"person":"郑春燕","category":"键盘","asin":"B0FKYJJ71B","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"张志鹏","category":"手写板","asin":"B0GG8QDRV5","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.2713},{"person":"郑春燕","category":"键盘","asin":"B0FZ8F6X3X","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"键盘","asin":"B0CFLC5J4X","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"张志鹏","category":"幕布","asin":"B0BF55YPYT","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.5678},{"person":"张志鹏","category":"幕布","asin":"B094V2DL3S","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.4015},{"person":"张志鹏","category":"幕布","asin":"B094V2DL3S","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.4015},{"person":"郑春燕","category":"鼠标","asin":"B0GY3MFR4P","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"鼠标","asin":"B0H5B3DYS7","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.0436},{"person":"张志鹏","category":"幕布","asin":"B094V2DL3S","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.4015},{"person":"高杰","category":"鼠标","asin":"B0BBZ5B2CZ","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.4584},{"person":"张志鹏","category":"轨道车","asin":"B0GRTNJ52G","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"高杰","category":"键盘","asin":"B0B879B6SC","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.1465},{"person":"张志鹏","category":"幕布","asin":"B0BGWW2H2L","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.089},{"person":"张志鹏","category":"幕布","asin":"B0B7W37NBQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.8793},{"person":"张志鹏","category":"幕布","asin":"B0B7WHCX3K","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.206},{"person":"李燕","category":"键鼠套装","asin":"B0BLTW4HF5","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"高杰","category":"键鼠套装","asin":"B0C4SMYFWQ","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"键鼠套装","asin":"B0C6R7G7X4","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"鼠标","asin":"B0CKQXKHWW","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"高杰","category":"手写板","asin":"B0C77P6352","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"李燕","category":"手写板","asin":"B0CCQ9MKWZ","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"李燕","category":"手写板","asin":"B08YD84DFV","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"李燕","category":"桌垫","asin":"B09BYHFGM7","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"张志鹏","category":"幕布","asin":"B0CDZRC1RK","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"李燕","category":"键盘","asin":"B0CCNJ175K","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"李燕","category":"鼠标","asin":"B0D83L87VM","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"张志鹏","category":"幕布","asin":"B0D8NPJD9S","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"李燕","category":"手写板","asin":"B0DBRS9RC2","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"李燕","category":"手写板","asin":"B0DF6SNQZ3","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"李燕","category":"电容笔","asin":"B0DG48RV92","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"高杰","category":"鼠标","asin":"B0CXXRSX7H","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"高杰","category":"鼠标","asin":"B0DZBDRXK7","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"张志鹏","category":"手写板","asin":"B0F626FLLG","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"键鼠套装","asin":"B0DNN7CCJ7","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"高杰","category":"鼠标","asin":"B0FFSPBK6P","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.4341},{"person":"李燕","category":"鼠标","asin":"B0FRMS3RCV","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"高杰","category":"Switch2充电器","asin":"B0FX2WP2Q6","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"高杰","category":"鼠标","asin":"B0FXX3P4ZT","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"鼠标","asin":"B0G84FNMWW","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"高杰","category":"鼠标","asin":"B0GK5NJPX4","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"高杰","category":"鼠标","asin":"B0GK5SHHT3","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"键鼠套装","asin":"B0C8585WV8","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"键鼠套装","asin":"B0GQ3D38GB","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"鼠标","asin":"B0G23SB1FL","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"键盘","asin":"B0G2SD2PGP","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"键鼠套装","asin":"B0GRTBMB3C","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"键盘","asin":"B0GRTQ2BRB","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"键盘","asin":"B0CP7P7LVB","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"张志鹏","category":"幕布","asin":"B094V2DL3S","sales":0,"profit":0,"margin4km":null,"marginCaptain":-0.4015},{"person":"张志鹏","category":"幕布","asin":"B0BF55YPYT","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.5678},{"person":"张志鹏","category":"幕布","asin":"B0BF55YPYT","sales":0,"profit":0,"margin4km":null,"marginCaptain":0.5678},{"person":"郑春燕","category":"键盘","asin":"B0CZ92WJ3D","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"高杰","category":"鼠标","asin":"B0H36N1YTC","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"鼠标","asin":"B0H75RX9M6","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"郑春燕","category":"蜡烛灯","asin":"B0DPSQ6YCV","sales":0,"profit":0,"margin4km":null,"marginCaptain":0},{"person":"张志鹏","category":"轨道车","asin":"B0GRTNJ52G","sales":0,"profit":0,"margin4km":null,"marginCaptain":0}],"categories":[{"name":"蜡烛灯","sales":238357.00999999998,"profit":26624.496144000008},{"name":"键鼠套装","sales":236784.77,"profit":40137.19098300001},{"name":"鼠标","sales":181735.78999999998,"profit":23029.905697},{"name":"键盘","sales":73178.99,"profit":7982.122564000001},{"name":"磁力方块","sales":44490.82,"profit":2616.1281860000004},{"name":"鼠标垫","sales":31637.38,"profit":5213.5787660000005},{"name":"数字键盘","sales":15991.25,"profit":5656.959188000001},{"name":"手写板","sales":9496.11,"profit":-14.237316999999997},{"name":"轨道车","sales":7566.41,"profit":-2982.1016790000003},{"name":"幕布","sales":6144.360000000001,"profit":550.940082},{"name":"Switch2收纳包,Switch2保护壳","sales":1163.06,"profit":-844.730478},{"name":"止吠器","sales":455.65999999999997,"profit":72.58742600000001},{"name":"桌垫","sales":150.13,"profit":8.152059},{"name":"翻译耳机","sales":0,"profit":0},{"name":"Switch2充电器","sales":0,"profit":0},{"name":"电容笔","sales":0,"profit":0}],"personnel":[{"name":"高杰","sales":471904.33,"profit":55624.053253000005},{"name":"郑春燕","sales":347059.56999999995,"profit":52161.930916000005},{"name":"张志鹏","sales":22429.009999999995,"profit":-2421.78475},{"name":"李燕","sales":5758.830000000001,"profit":2686.7922019999996}],"weeklyTrend":[{"week":"9.21-9.27","sales":760601.86,"profit":77218.966853},{"week":"9.28-10.4","sales":848644.89,"profit":89519.669296},{"week":"10.5-10.11","sales":898653.26,"profit":112410.489316},{"week":"10.12-10.18","sales":829775.01,"profit":106959.212713},{"week":"10.19-10.25","sales":847151.74,"profit":108050.991621}],"totalSales":847151.7400000002,"totalProfit":108050.991621,"lastWeekSales":829775.01,"lastWeekProfit":106959.212713,"monthCumProfit":376649.314321,"monthProfitTarget":500000,"monthProfitPct":75.32986286420001,"salesWoW":2.094149593635052,"profitWoW":1.0207432163225865,"monthProfitWeeks":[49228.62,112410.49,106959.2127,108050.991621]},"calibreB":{"groupDaily":[{"date":"10.19","sales":20859.76,"profit":2467.641656,"completion":0.99383461447069},{"date":"10.20","sales":22127.48,"profit":2633.651583,"completion":1.06069457016855},{"date":"10.21","sales":19986.43,"profit":2293.565028,"completion":0.923725821301275},{"date":"10.22","sales":20379.49,"profit":2368.023637,"completion":0.953713782798687},{"date":"10.23","sales":16001,"profit":1846.315832,"completion":0.743597668901911},{"date":"10.24","sales":11769.14,"profit":1387.676662,"completion":0.558882241688314},{"date":"10.25","sales":15345.07,"profit":1887.224509,"completion":0.760073504903441}],"gaojieDaily":[{"date":"10.19","sales":10949.89,"profit":1128.933659,"completion":0.909348685233291},{"date":"10.20","sales":11703.81,"profit":1206.662811,"completion":0.971959009243038},{"date":"10.21","sales":12514.54,"profit":1290.249074,"completion":1.03928719788961},{"date":"10.22","sales":11441.09,"profit":1179.576379,"completion":0.950141065265108},{"date":"10.23","sales":9558.65,"profit":985.496815,"completion":0.793811244688778},{"date":"10.24","sales":6425.76,"profit":662.495856,"completion":0.533636082885278},{"date":"10.25","sales":7359.45,"profit":758.759295,"completion":0.611175653960007}],"zhengchunyanDaily":[{"date":"10.19","sales":9237.6,"profit":1282.17888,"completion":1.29098338669728},{"date":"10.20","sales":9739.99,"profit":1351.910612,"completion":1.36119395477154},{"date":"10.21","sales":6703.82,"profit":930.490216,"completion":0.936879735798143},{"date":"10.22","sales":8136.91,"profit":1129.403108,"completion":1.13715852916893},{"date":"10.23","sales":6079.6,"profit":843.84848,"completion":0.849643045570793},{"date":"10.24","sales":4861.4,"profit":674.76232,"completion":0.679395799351578},{"date":"10.25","sales":7376.24,"profit":1023.822112,"completion":1.03085252622888}],"zhangzhipengDaily":[{"date":"10.19","sales":562.68,"profit":8.890344,"completion":0.0358055699873135},{"date":"10.20","sales":530.24,"profit":8.377792,"completion":0.0337412835538372},{"date":"10.21","sales":623.19,"profit":9.846402,"completion":0.0396560623451942},{"date":"10.22","sales":690.77,"profit":10.914166,"completion":0.043956446968324},{"date":"10.23","sales":335.92,"profit":5.307536,"completion":0.0213759278277855},{"date":"10.24","sales":379.8,"profit":6.00084,"completion":0.0241681870355827},{"date":"10.25","sales":382.56,"profit":6.044448,"completion":0.024343816830786}],"liyanDaily":[{"date":"10.19","sales":109.59,"profit":47.638773,"completion":0.959318008820154},{"date":"10.20","sales":153.44,"profit":66.700368,"completion":1.34316776415151},{"date":"10.21","sales":144.88,"profit":62.979336,"completion":1.26823609013472},{"date":"10.22","sales":110.72,"profit":48.129984,"completion":0.969209690086389},{"date":"10.23","sales":26.83,"profit":11.663001,"completion":0.234861777321331},{"date":"10.24","sales":102.18,"profit":44.417646,"completion":0.894453090074307},{"date":"10.25","sales":226.82,"profit":98.598654,"completion":1.98551428744034}],"totalSales":126468.37,"totalProfit":14884.098907,"monthCumProfit":52052.857677,"monthCumProfitCNY":350471.890739241,"monthProfitWeeks":[6856.43,15905.47,14406.85877,14884.098907],"lastWeekSales":124284.87,"lastWeekProfit":14406.858769,"monthTarget":500000,"monthPct":70.09437814784819,"usdCnyRate":6.733,"salesWoW":1.756851014930458,"profitWoW":3.3125898271932948}};
+
+function fmtMoney(v){ if(v>=10000) return (v/10000).toFixed(2)+'万'; return v.toFixed(2); }
+function fmtPct(v){ return (v*100).toFixed(2)+'%'; }
+
+var CAT_METRICS = [{"week":"9.28-10.4","categories":[{"name":"Switch2充电器","traffic":0,"exposure":0,"clicks":0,"sales":0},{"name":"Switch2收纳包,Switch2保护壳","traffic":226,"exposure":39438,"clicks":165,"sales":26},{"name":"磁力方块","traffic":3458,"exposure":461584,"clicks":1723,"sales":155},{"name":"电容笔","traffic":0,"exposure":0,"clicks":0,"sales":0},{"name":"翻译耳机","traffic":16,"exposure":2136,"clicks":14,"sales":0},{"name":"轨道车","traffic":313,"exposure":22439,"clicks":164,"sales":13},{"name":"键盘","traffic":4943,"exposure":227352,"clicks":1794,"sales":492},{"name":"键鼠套装","traffic":11929,"exposure":851220,"clicks":5425,"sales":1328},{"name":"蜡烛灯","traffic":10689,"exposure":816861,"clicks":4512,"sales":934},{"name":"幕布","traffic":2271,"exposure":84373,"clicks":978,"sales":93},{"name":"手写板","traffic":1619,"exposure":183946,"clicks":727,"sales":166},{"name":"鼠标","traffic":10625,"exposure":725897,"clicks":3953,"sales":2497},{"name":"鼠标垫","traffic":2549,"exposure":107099,"clicks":804,"sales":793},{"name":"数字键盘","traffic":895,"exposure":18626,"clicks":133,"sales":206},{"name":"止吠器","traffic":42,"exposure":4063,"clicks":25,"sales":2},{"name":"桌垫","traffic":23,"exposure":1706,"clicks":15,"sales":5}]},{"week":"10.5-10.11","categories":[{"name":"Switch2充电器","traffic":1,"exposure":0,"clicks":0,"sales":0},{"name":"Switch2收纳包,Switch2保护壳","traffic":209,"exposure":89841,"clicks":205,"sales":36},{"name":"磁力方块","traffic":2610,"exposure":290129,"clicks":1446,"sales":251},{"name":"电容笔","traffic":0,"exposure":0,"clicks":0,"sales":0},{"name":"翻译耳机","traffic":17,"exposure":3084,"clicks":14,"sales":0},{"name":"轨道车","traffic":259,"exposure":52215,"clicks":566,"sales":56},{"name":"键盘","traffic":4210,"exposure":236220,"clicks":1785,"sales":465},{"name":"键鼠套装","traffic":10749,"exposure":1145792,"clicks":6030,"sales":1287},{"name":"蜡烛灯","traffic":10091,"exposure":1213796,"clicks":6731,"sales":1194},{"name":"幕布","traffic":1439,"exposure":139429,"clicks":1346,"sales":92},{"name":"手写板","traffic":1363,"exposure":244816,"clicks":865,"sales":233},{"name":"鼠标","traffic":7639,"exposure":827010,"clicks":3944,"sales":2085},{"name":"鼠标垫","traffic":2054,"exposure":114870,"clicks":794,"sales":811},{"name":"数字键盘","traffic":880,"exposure":64189,"clicks":214,"sales":264},{"name":"止吠器","traffic":39,"exposure":5357,"clicks":36,"sales":2},{"name":"桌垫","traffic":16,"exposure":3368,"clicks":19,"sales":0}]},{"week":"10.12-10.18","categories":[{"name":"Switch2充电器","traffic":3,"exposure":98,"clicks":1,"sales":0},{"name":"Switch2收纳包,Switch2保护壳","traffic":65,"exposure":15632,"clicks":58,"sales":15},{"name":"磁力方块","traffic":564,"exposure":108521,"clicks":727,"sales":131},{"name":"电容笔","traffic":0,"exposure":0,"clicks":0,"sales":0},{"name":"翻译耳机","traffic":6,"exposure":2179,"clicks":5,"sales":0},{"name":"轨道车","traffic":509,"exposure":31435,"clicks":370,"sales":40},{"name":"键盘","traffic":2671,"exposure":205640,"clicks":1902,"sales":480},{"name":"键鼠套装","traffic":6897,"exposure":749155,"clicks":4944,"sales":1234},{"name":"蜡烛灯","traffic":10104,"exposure":1334073,"clicks":7953,"sales":1670},{"name":"幕布","traffic":859,"exposure":83645,"clicks":714,"sales":49},{"name":"手写板","traffic":858,"exposure":191838,"clicks":761,"sales":147},{"name":"鼠标","traffic":4342,"exposure":627611,"clicks":3268,"sales":1934},{"name":"鼠标垫","traffic":1486,"exposure":100055,"clicks":849,"sales":764},{"name":"数字键盘","traffic":637,"exposure":36462,"clicks":202,"sales":209},{"name":"止吠器","traffic":15,"exposure":3350,"clicks":18,"sales":0},{"name":"桌垫","traffic":7,"exposure":1702,"clicks":10,"sales":0}]},{"week":"10.19-10.25","categories":[{"name":"Switch2充电器","traffic":0,"exposure":150,"clicks":0,"sales":0},{"name":"Switch2收纳包,Switch2保护壳","traffic":106,"exposure":7948,"clicks":57,"sales":18},{"name":"磁力方块","traffic":2005,"exposure":344123,"clicks":1889,"sales":205},{"name":"电容笔","traffic":0,"exposure":0,"clicks":0,"sales":0},{"name":"翻译耳机","traffic":4,"exposure":2918,"clicks":7,"sales":0},{"name":"轨道车","traffic":283,"exposure":88900,"clicks":701,"sales":25},{"name":"键盘","traffic":3045,"exposure":239742,"clicks":1696,"sales":441},{"name":"键鼠套装","traffic":7160,"exposure":918501,"clicks":4928,"sales":1036},{"name":"蜡烛灯","traffic":10787,"exposure":1673608,"clicks":9236,"sales":1846},{"name":"幕布","traffic":403,"exposure":29215,"clicks":224,"sales":28},{"name":"手写板","traffic":782,"exposure":191189,"clicks":658,"sales":128},{"name":"鼠标","traffic":5125,"exposure":647025,"clicks":3384,"sales":2199},{"name":"鼠标垫","traffic":1634,"exposure":97113,"clicks":777,"sales":769},{"name":"数字键盘","traffic":622,"exposure":20747,"clicks":139,"sales":155},{"name":"止吠器","traffic":27,"exposure":4255,"clicks":26,"sales":3},{"name":"桌垫","traffic":8,"exposure":3585,"clicks":15,"sales":2}]}];
+var CAT_WEEKS = CAT_METRICS.map(function(m){ return m.week; });
+var CAT_NAMES = ["Switch2充电器","Switch2收纳包,Switch2保护壳","磁力方块","电容笔","翻译耳机","轨道车","键盘","键鼠套装","蜡烛灯","幕布","手写板","鼠标","鼠标垫","数字键盘","止吠器","桌垫"];
+var currentCatIndex = 0;
+
+// 逐点决定双线标签的上下位置：按各自序列最大值占比近似像素高度，高点的标签放上、低点的放下
+// 解决两条线交叉或贴近时标签挤在同一缝隙的问题；零值点贴底，标签一律放上方避免出界
+function splitLabelPos(a, b) {
+  var aMax = Math.max.apply(null, a) || 1;
+  var bMax = Math.max.apply(null, b) || 1;
+  var pa = [], pb = [];
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] === 0 || b[i] === 0) { pa.push('top'); pb.push('top'); continue; }
+    var aHigher = a[i] / aMax >= b[i] / bMax;
+    pa.push(aHigher ? 'top' : 'bottom');
+    pb.push(aHigher ? 'bottom' : 'top');
+  }
+  return { pa: pa, pb: pb };
+}
+function toLabeledData(arr, pos) {
+  return arr.map(function(v, i) { return { value: v, label: { position: pos[i] } }; });
+}
+
+function getCatSeries(catName) {
+  return CAT_METRICS.map(function(m) {
+    var c = m.categories.find(function(x){ return x.name === catName; });
+    return c || { traffic:0, exposure:0, clicks:0, sales:0 };
+  });
+}
+
+function renderCatFilter() {
+  var container = document.getElementById('catFilter');
+  if (!container || CAT_NAMES.length === 0) return;
+  container.innerHTML = CAT_NAMES.map(function(name, i) {
+    var active = i === currentCatIndex;
+    return '<button onclick="selectCat(' + i + ')" style="padding:6px 14px;border:1px solid ' + (active ? '#1890ff' : '#d9d9d9') + ';background:' + (active ? '#1890ff' : '#fff') + ';color:' + (active ? '#fff' : '#666') + ';border-radius:16px;cursor:pointer;font-size:12px;">' + name + '</button>';
+  }).join('');
+}
+
+function selectCat(i) {
+  currentCatIndex = i;
+  renderCatFilter();
+  renderCatKpi();
+  renderCatCharts();
+  renderCatTable();
+}
+
+function renderCatKpi() {
+  var container = document.getElementById('catKpi');
+  if (!container || CAT_NAMES.length === 0) return;
+  var cat = CAT_NAMES[currentCatIndex];
+  var series = getCatSeries(cat);
+  var cur = series[series.length - 1];
+  var prev = series[series.length - 2] || cur;
+  function delta(curV, prevV) {
+    if (prevV === 0) return { pct: 0, up: true };
+    var pct = (curV - prevV) / prevV * 100;
+    return { pct: pct, up: pct >= 0 };
+  }
+  function fmt(n) { return (n >= 10000 ? (n/10000).toFixed(1)+'万' : Math.round(n)).toLocaleString(); }
+  var items = [
+    { label: '本周销量', val: fmt(cur.sales), d: delta(cur.sales, prev.sales) },
+    { label: '本周总流量', val: fmt(cur.traffic), d: delta(cur.traffic, prev.traffic) },
+    { label: '本周广告曝光', val: fmt(cur.exposure), d: delta(cur.exposure, prev.exposure) },
+    { label: '本周广告点击', val: fmt(cur.clicks), d: delta(cur.clicks, prev.clicks) }
+  ];
+  container.innerHTML = items.map(function(x) {
+    return '<div style="background:#fafafa;border:1px solid #e0e0e0;padding:10px 14px;">' +
+      '<div style="font-size:11px;color:#999;margin-bottom:4px;">' + x.label + '</div>' +
+      '<div style="font-size:18px;font-weight:600;color:#333;">' + x.val + '</div>' +
+      '<div style="font-size:11px;margin-top:2px;color:' + (x.d.up ? '#52c41a' : '#f5222d') + ';">' +
+        (x.d.up ? '▲' : '▼') + ' ' + Math.abs(x.d.pct).toFixed(1) + '%（环比上周）' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderCatCharts() {
+  if (CAT_NAMES.length === 0) return;
+  var cat = CAT_NAMES[currentCatIndex];
+  var series = getCatSeries(cat);
+  var weeks = CAT_WEEKS;
+  var sData = series.map(function(s){ return s.sales; });
+  var tData = series.map(function(s){ return s.traffic; });
+  var posSL = splitLabelPos(sData, tData);
+  var ecSL = echarts.init(document.getElementById('chartCatSL'));
+  ecSL.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['销量', '总流量'], bottom: 0, right: 'center' },
+    grid: { left: 60, right: 60, bottom: 58, top: 36 },
+    xAxis: { type: 'category', data: weeks },
+    yAxis: [
+      { type: 'value', name: '总流量', splitLine: { lineStyle: { type: 'dashed' } } },
+      { type: 'value', name: '销量', splitLine: { show: false } }
+    ],
+    series: [
+      { name: '销量', type: 'line', yAxisIndex: 1, color: '#1890ff', symbolSize: 8, data: toLabeledData(sData, posSL.pa), label: { show: true, distance: 6, fontSize: 10 }, labelLayout: { moveOverlap: 'shiftY' } },
+      { name: '总流量', type: 'line', yAxisIndex: 0, color: '#52c41a', symbolSize: 8, data: toLabeledData(tData, posSL.pb), label: { show: true, distance: 6, fontSize: 10 }, labelLayout: { moveOverlap: 'shiftY' } }
+    ]
+  });
+  window.addEventListener('resize', function(){ ecSL.resize(); });
+  var cData = series.map(function(s){ return s.clicks; });
+  var eData = series.map(function(s){ return s.exposure; });
+  var posCE = splitLabelPos(cData, eData);
+  var ecCE = echarts.init(document.getElementById('chartCatCE'));
+  ecCE.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['广告点击', '广告曝光'], bottom: 0, right: 'center' },
+    grid: { left: 70, right: 60, bottom: 58, top: 36 },
+    xAxis: { type: 'category', data: weeks },
+    yAxis: [
+      { type: 'value', name: '广告曝光', splitLine: { lineStyle: { type: 'dashed' } }, axisLabel: { formatter: function(v){ return v >= 1000 ? (v/1000)+'k' : v; } } },
+      { type: 'value', name: '广告点击', splitLine: { show: false } }
+    ],
+    series: [
+      { name: '广告点击', type: 'line', yAxisIndex: 1, color: '#faad14', symbolSize: 8, data: toLabeledData(cData, posCE.pa), label: { show: true, distance: 6, fontSize: 10 }, labelLayout: { moveOverlap: 'shiftY' } },
+      { name: '广告曝光', type: 'line', yAxisIndex: 0, color: '#722ed1', symbolSize: 8, data: toLabeledData(eData, posCE.pb), label: { show: true, distance: 6, fontSize: 10, formatter: function(p){ return p.value >= 1000 ? (p.value/1000).toFixed(1)+'k' : p.value; } }, labelLayout: { moveOverlap: 'shiftY' } }
+    ]
+  });
+  window.addEventListener('resize', function(){ ecCE.resize(); });
+}
+
+function renderCatTable() {
+  var container = document.getElementById('catDetailTable');
+  if (!container || CAT_NAMES.length === 0) return;
+  var cat = CAT_NAMES[currentCatIndex];
+  var series = getCatSeries(cat);
+  var weeks = CAT_WEEKS;
+  var lastIdx = series.length - 1;
+  function delta(cur, prev) {
+    if (prev === 0) return '-';
+    var pct = (cur - prev) / prev * 100;
+    return (pct >= 0 ? '▲' : '▼') + ' ' + Math.abs(pct).toFixed(1) + '%';
+  }
+  var headers = '<tr><th>指标</th>' + weeks.map(function(w){ return '<th style="text-align:center;">' + w + '</th>'; }).join('') + '<th style="text-align:center;">本周环比</th><th style="text-align:center;">4周合计</th></tr>';
+  var rows = [];
+  var rowDefs = [
+    { name: '销量（件）', key: 'sales' },
+    { name: '总流量', key: 'traffic' },
+    { name: '广告曝光', key: 'exposure' },
+    { name: '广告点击', key: 'clicks' },
+    { name: '广告点击率', key: 'ctr', isPct: true }
+  ];
+  rowDefs.forEach(function(r) {
+    if (r.isPct) {
+      var vals = series.map(function(s){ return s.exposure > 0 ? (s.clicks / s.exposure * 100) : 0; });
+      var cur = vals[lastIdx], prev = vals[lastIdx - 1] || cur;
+      var pctDelta = prev === 0 ? '-' : ((cur - prev)).toFixed(2) + ' pp';
+      rows.push('<tr><td>' + r.name + '</td>' + vals.map(function(v){ return '<td style="text-align:center;">' + v.toFixed(2) + '%</td>'; }).join('') +
+        '<td style="text-align:center;color:' + (cur >= prev ? '#52c41a' : '#f5222d') + ';">' + (cur >= prev ? '▲' : '▼') + ' ' + pctDelta + '</td>' +
+        '<td style="text-align:center;">-</td></tr>');
+    } else {
+      var vals = series.map(function(s){ return s[r.key]; });
+      var cur = vals[lastIdx], prev = vals[lastIdx - 1] || cur;
+      var sum = vals.reduce(function(a, b){ return a + b; }, 0);
+      rows.push('<tr><td>' + r.name + '</td>' + vals.map(function(v){ return '<td style="text-align:center;">' + v.toLocaleString() + '</td>'; }).join('') +
+        '<td style="text-align:center;color:' + (cur >= prev ? '#52c41a' : '#f5222d') + ';">' + delta(cur, prev) + '</td>' +
+        '<td style="text-align:center;font-weight:500;">' + sum.toLocaleString() + '</td></tr>');
+    }
+  });
+  container.innerHTML = '<table class="data-table"><thead>' + headers + '</thead><tbody>' + rows.join('') + '</tbody></table>';
+}
+
+function switchPage(page){
+  var pages=['A','B','C'];
+  document.querySelectorAll('.tab').forEach((t,i)=>{ t.classList.toggle('active', page===pages[i]); });
+  document.getElementById('pageA').classList.toggle('active', page==='A');
+  document.getElementById('pageB').classList.toggle('active', page==='B');
+  document.getElementById('pageC').classList.toggle('active', page==='C');
+  if(page==='A') renderKpiA();
+  else if(page==='B') renderKpiB();
+  requestAnimationFrame(()=>{
+    if(page==='A') renderChartsA();
+    else if(page==='B') renderChartsB();
+    else renderWorkContent();
+    requestAnimationFrame(()=>{ window.dispatchEvent(new Event('resize')); });
+  });
+}
+
+function kpiCard(label, value, sub, cls){
+  return '<div class="kpi-card '+(cls||'')+'"><div class="label">'+label+'</div><div class="value">'+value+'</div>'+(sub?'<div class="sub">'+sub+'</div>':'')+'</div>';
+}
+
+function renderKpiA(){
+  var totalSales = DATA.calibreA.totalSales, totalProfit = DATA.calibreA.totalProfit;
+  var margin = totalProfit/totalSales;
+  var details = DATA.calibreA.details;
+  var activeCount=0, lossCount=0, lossBase=0;
+  var capMargins = [];
+  details.forEach(d=>{
+    if(d.sales>0) activeCount++;
+    if(d.margin4km!=null){ lossBase++; if(d.margin4km<0) lossCount++; }  // 与图⑧一致：按 4km 毛利率判定
+    if(d.marginCaptain!=null) capMargins.push(d.marginCaptain);
+  });
+  var avgCap = capMargins.length ? capMargins.reduce((a,b)=>a+b,0)/capMargins.length : 0.10;
+  var monthPct = DATA.calibreA.monthProfitPct;
+  var salesWoW = DATA.calibreA.salesWoW, profitWoW = DATA.calibreA.profitWoW;
+  var salesWoWStr = (salesWoW>=0?'+':'')+salesWoW.toFixed(2)+'%';
+  var profitWoWStr = (profitWoW>=0?'+':'')+profitWoW.toFixed(2)+'%';
+  var html = '';
+  html += kpiCard('本周总销售额', fmtMoney(totalSales), '环比 '+salesWoWStr, salesWoW>=0?'success':'danger');
+  html += kpiCard('本周总利润', fmtMoney(totalProfit), '环比 '+profitWoWStr, profitWoW>=0?'success':'danger');
+  html += kpiCard('整体毛利率', fmtPct(margin), '利润/销售额', 'info');
+  html += kpiCard('有动销 ASIN 数', activeCount+' 个', '总 '+details.length+' 个', '');
+  html += kpiCard('亏损 ASIN 数', lossCount+' 个', '4km 口径，可判定 '+lossBase+'/'+details.length+' 个', 'danger');
+  html += kpiCard('平均船长毛利率', fmtPct(avgCap), 'ASIN 维度均值', 'info');
+  html += kpiCard('月利润目标完成度', monthPct.toFixed(2)+'%', '本月累计 '+fmtMoney(DATA.calibreA.monthCumProfit)+' / 50万', 'warning');
+  document.getElementById('kpiRowA').innerHTML = html;
+}
+
+function renderKpiB(){
+  var totalSales = DATA.calibreB.totalSales, totalProfit = DATA.calibreB.totalProfit;
+  var avgDaily = totalSales/7;
+  var notMet = 0;
+  DATA.calibreB.groupDaily.forEach(d=>{ if(d.completion<1) notMet++; });
+  var monthPct = DATA.calibreB.monthPct;
+  var salesWoW = DATA.calibreB.salesWoW, profitWoW = DATA.calibreB.profitWoW;
+  var salesWoWStr = (salesWoW>=0?'+':'')+salesWoW.toFixed(2)+'%';
+  var profitWoWStr = (profitWoW>=0?'+':'')+profitWoW.toFixed(2)+'%';
+  var html = '';
+  html += kpiCard('月利润目标完成度', monthPct.toFixed(2)+'%', '本月累计 '+(DATA.calibreB.monthCumProfitCNY/10000).toFixed(2)+' 万 CNY', 'warning');
+  html += kpiCard('本周总销售额 (USD)', fmtMoney(totalSales), '环比 '+salesWoWStr, salesWoW>=0?'success':'danger');
+  html += kpiCard('本周总利润 (USD)', fmtMoney(totalProfit), '环比 '+profitWoWStr, profitWoW>=0?'success':'danger');
+  html += kpiCard('未达标天数', notMet+' 天', '7 天中', 'danger');
+  html += kpiCard('日均销售额 (USD)', fmtMoney(avgDaily), '小组口径', '');
+  document.getElementById('kpiRowB').innerHTML = html;
+}
+
+function chartA1(){
+  var cats = DATA.calibreA.categories;
+  var ec = echarts.init(document.getElementById('chartA1'));
+  ec.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:function(p){var s=p[0].name+'<br/>';p.forEach(function(x){s+=x.marker+x.seriesName+': '+x.value.toFixed(2)+'元<br/>';});return s;}},
+    legend:{data:['销售额','利润'],top:0},
+    grid:{left:65,right:55,bottom:105,top:60},
+    xAxis:{type:'category',data:cats.map(c=>c.name),axisLabel:{rotate:45,fontSize:11}},
+    yAxis:[{type:'value',name:'销售额',axisLabel:{formatter:function(v){return (v/10000).toFixed(2)+'万';}}},
+         {type:'value',name:'利润',axisLabel:{formatter:function(v){return (v/10000).toFixed(2)+'万';}}}],
+    series:[
+      {name:'销售额',type:'bar',data:cats.map(c=>c.sales),itemStyle:{color:'#5470c6'}},
+      {name:'利润',type:'bar',yAxisIndex:1,data:cats.map(c=>c.profit),itemStyle:{color:'#91cc75'}}
+    ]
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function chartA2(){
+  // 横向条形图：品类名在左轴，金额标签在条右侧，彻底避免标签与品类名争位压叠
+  var cats = DATA.calibreA.categories.slice().sort((a,b)=>b.sales-a.sales).reverse();
+  var ec = echarts.init(document.getElementById('chartA2'));
+  ec.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:function(p){
+      return p[0].name+'<br/>销售额: '+(p[0].value/10000).toFixed(2)+'万元';
+    }},
+    grid:{left:115,right:85,bottom:20,top:20},
+    xAxis:{type:'value',axisLabel:{formatter:function(v){return (v/10000).toFixed(2)+'万';},fontSize:9}},
+    yAxis:{type:'category',data:cats.map(c=>c.name),axisLabel:{fontSize:10}},
+    series:[{
+      type:'bar',data:cats.map(c=>c.sales),itemStyle:{color:'#5470c6'},barCategoryGap:'40%',
+      label:{show:true,position:'right',distance:5,fontSize:10,formatter:function(p){return (p.value/10000).toFixed(2)+'万';}}
+    }]
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function chartA3(){
+  var p = DATA.calibreA.personnel;
+  var ec = echarts.init(document.getElementById('chartA3'));
+  ec.setOption({
+    tooltip:{trigger:'axis',formatter:function(p){var s=p[0].name+'<br/>';p.forEach(function(x){s+=x.marker+x.seriesName+': '+x.value.toFixed(2)+'<br/>';});return s;}},
+    legend:{data:['销售额','利润'],top:0},
+    grid:{left:60,right:40,bottom:40,top:40},
+    xAxis:{type:'category',data:p.map(x=>x.name)},
+    yAxis:[{type:'value',name:'销售额',axisLabel:{formatter:function(v){return (v/10000).toFixed(2)+'万';}}},
+         {type:'value',name:'利润',axisLabel:{formatter:function(v){return (v/10000).toFixed(2)+'万';}}}],
+    series:[
+      {name:'销售额',type:'bar',data:p.map(x=>x.sales),itemStyle:{color:'#5470c6'},
+       label:{show:true,position:'top',formatter:function(p){return (p.value/10000).toFixed(2)+'万';}}},
+      {name:'利润',type:'bar',yAxisIndex:1,data:p.map(x=>x.profit),itemStyle:{color:'#91cc75'},
+       label:{show:true,position:'top',formatter:function(p){return (p.value/10000).toFixed(2)+'万';}}}
+    ]
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function chartA4(){
+  var p = DATA.calibreA.personnel;
+  var ec = echarts.init(document.getElementById('chartA4'));
+  ec.setOption({
+    tooltip:{trigger:'item',formatter:function(p){return p.name+': '+p.value.toFixed(2)+'元 ('+p.percent.toFixed(2)+'%)';}},
+    legend:{bottom:0},
+    series:[{
+      type:'pie',radius:['40%','65%'],center:['50%','45%'],
+      data:p.map(x=>({name:x.name,value:x.profit})),
+      label:{formatter:function(p){return p.name+'\n'+p.percent.toFixed(2)+'%';}}
+    }]
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function chartA5(){
+  var monthCumProfit = DATA.calibreA.monthCumProfit;
+  var monthTarget = DATA.calibreA.monthProfitTarget;
+  var pct = monthCumProfit/monthTarget*100;
+  var ec = echarts.init(document.getElementById('chartA5'));
+  ec.setOption({
+    series:[{
+      type:'pie',radius:['62%','82%'],center:['50%','50%'],startAngle:90,silent:true,
+      label:{show:false},labelLine:{show:false},
+      data:[
+        {value:pct, name:'已完成', itemStyle:{color:'#1890ff'}},
+        {value:100-pct, name:'剩余', itemStyle:{color:'#f0f0f0'}}
+      ]
+    }],
+    graphic:[
+      {type:'text', left:'center', top:'38%', style:{text:pct.toFixed(2)+'%', fontSize:42, fontWeight:'bold', fill:'#1890ff', textAlign:'center'}},
+      {type:'text', left:'center', top:'60%', style:{text:'月利润目标完成度', fontSize:14, fill:'#999', textAlign:'center'}},
+      {type:'text', left:'center', top:'70%', style:{text:'本月累计 '+(DATA.calibreA.monthCumProfit/10000).toFixed(2)+' 万 RMB 利润 / 目标 50 万', fontSize:11, fill:'#bbb', textAlign:'center'}}
+    ]
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function chartATrend(){
+  var trend = DATA.calibreA.weeklyTrend || [];
+  var sData = trend.map(t=>t.sales), pData = trend.map(t=>t.profit);
+  var pos = splitLabelPos(sData, pData);
+  var ec = echarts.init(document.getElementById('chartA10'));
+  ec.setOption({
+    tooltip:{trigger:'axis',formatter:function(p){var s=p[0].name+'<br/>';p.forEach(function(x){s+=x.marker+x.seriesName+': '+(x.value/10000).toFixed(2)+'万元<br/>';});return s;}},
+    legend:{data:['销售额','利润'],top:0},
+    grid:{left:70,right:70,bottom:40,top:40},
+    xAxis:{type:'category',data:trend.map(t=>t.week)},
+    yAxis:[{type:'value',name:'销售额',axisLabel:{formatter:function(v){return (v/10000).toFixed(2)+'万';}}},
+         {type:'value',name:'利润',axisLabel:{formatter:function(v){return (v/10000).toFixed(2)+'万';}}}],
+    series:[
+      {name:'销售额',type:'line',data:toLabeledData(sData,pos.pa),smooth:true,itemStyle:{color:'#5470c6'},
+       label:{show:true,distance:6,fontSize:10,formatter:function(p){return (p.value/10000).toFixed(2)+'万';}},labelLayout:{moveOverlap:'shiftY'}},
+      {name:'利润',type:'line',yAxisIndex:1,data:toLabeledData(pData,pos.pb),smooth:true,itemStyle:{color:'#91cc75'},
+       label:{show:true,distance:6,fontSize:10,formatter:function(p){return (p.value/10000).toFixed(2)+'万';}},labelLayout:{moveOverlap:'shiftY'}}
+    ]
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function chartA6(){
+  var top10 = DATA.calibreA.details.slice().sort((a,b)=>b.sales-a.sales).slice(0,10);
+  var ec = echarts.init(document.getElementById('chartA6'));
+  ec.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    grid:{left:140,right:120,bottom:40,top:30},
+    xAxis:{type:'value',axisLabel:{formatter:function(v){return (v/10000).toFixed(2)+'万';}}},
+    yAxis:{type:'category',data:top10.map(d=>d.asin+' ('+d.person+')').reverse()},
+    series:[{
+      type:'bar',data:top10.map(d=>d.sales).reverse(),itemStyle:{color:'#5470c6'},
+      label:{show:true,position:'right',formatter:function(p){
+        var d=top10[top10.length-1-p.dataIndex];
+        return d.category+' '+p.value.toFixed(0)+'元';
+      }}
+    }]
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function chartA7(){
+  // 亏损判定与展示均用 4km 毛利率（4km 数值不精确但正负可靠）
+  var loss = DATA.calibreA.details
+    .filter(d=>d.margin4km!==null && d.margin4km<0)
+    .sort((a,b)=>a.margin4km-b.margin4km);
+  if(loss.length===0){
+    document.getElementById('chartA7').innerHTML = '<div style="padding:24px;text-align:center;color:#999;font-size:13px;">本周无 4km 毛利率为负的 ASIN</div>';
+    return;
+  }
+  var html = '<table class="data-table"><thead><tr><th>负责人</th><th>品类</th><th>ASIN</th><th>销售额</th><th>4km 毛利率</th></tr></thead><tbody>';
+  loss.forEach(d=>{
+    html += '<tr><td>'+d.person+'</td><td>'+d.category+'</td><td>'+d.asin+'</td>'
+      +'<td>'+d.sales.toFixed(2)+'</td>'
+      +'<td class="neg">'+(d.margin4km*100).toFixed(2)+'%</td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('chartA7').innerHTML = html;
+}
+
+function chartA9(){
+  var zero = DATA.calibreA.details.filter(d=>d.sales===0);
+  var persons = DATA.calibreA.personnel.map(p=>p.name);
+  var categories = [...new Set(zero.map(d=>d.category))];
+  var series = persons.map(p=>({name:p, type:'bar', stack:'total',data:categories.map(c=>zero.filter(d=>d.person===p && d.category===c).length)}));
+  var ec = echarts.init(document.getElementById('chartA9'));
+  ec.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{top:0},
+    grid:{left:60,right:40,bottom:60,top:40},
+    xAxis:{type:'category',data:categories,axisLabel:{rotate:30}},
+    yAxis:{type:'value',name:'ASIN 数'},
+    series:series
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function chartB1(){
+  var d = DATA.calibreB.groupDaily;
+  var ec = echarts.init(document.getElementById('chartB1'));
+  ec.setOption({
+    tooltip:{trigger:'axis',formatter:function(p){var s=p[0].name+'<br/>';p.forEach(function(x){s+=x.marker+x.seriesName+': '+x.value.toFixed(2)+'<br/>';});return s;}},
+    legend:{data:['销售额','利润'],top:0},
+    grid:{left:60,right:50,bottom:40,top:40},
+    xAxis:{type:'category',data:d.map(x=>x.date)},
+    yAxis:[{type:'value',name:'销售额'},{type:'value',name:'利润'}],
+    series:[
+      {name:'销售额',type:'line',data:d.map(x=>x.sales),smooth:true,itemStyle:{color:'#5470c6'},label:{show:true,formatter:function(p){return p.value.toFixed(2);}}},
+      {name:'利润',type:'line',yAxisIndex:1,data:d.map(x=>x.profit),smooth:true,itemStyle:{color:'#91cc75'}}
+    ]
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function chartB2(){
+  var d = DATA.calibreB.groupDaily;
+  var ec = echarts.init(document.getElementById('chartB2'));
+  ec.setOption({
+    tooltip:{trigger:'axis',formatter:function(p){return p[0].axisValue+'<br/>完成率: '+(p[0].value*100).toFixed(1)+'%';}},
+    grid:{left:60,right:40,bottom:40,top:30},
+    xAxis:{type:'category',data:d.map(x=>x.date)},
+    yAxis:{type:'value',name:'完成率',axisLabel:{formatter:function(v){return (v*100).toFixed(0)+'%';}}},
+    series:[{
+      type:'line',data:d.map(x=>x.completion),smooth:true,itemStyle:{color:'#ee6666'},
+      markLine:{data:[{yAxis:1,name:'达标基准'}],lineStyle:{color:'#52c41a',type:'dashed'}}
+    }]
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function chartB3(){
+  var dates = DATA.calibreB.groupDaily.map(x=>x.date);
+  var series = [
+    {name:'高杰',data:DATA.calibreB.gaojieDaily.map(x=>x.sales)},
+    {name:'郑春燕',data:DATA.calibreB.zhengchunyanDaily.map(x=>x.sales)},
+    {name:'张志鹏',data:DATA.calibreB.zhangzhipengDaily.map(x=>x.sales)},
+    {name:'李燕',data:DATA.calibreB.liyanDaily.map(x=>x.sales)}
+  ].map(s=>({...s,type:'line',smooth:true}));
+  var ec = echarts.init(document.getElementById('chartB3'));
+  ec.setOption({
+    tooltip:{trigger:'axis',formatter:function(p){var s=p[0].name+'<br/>';p.forEach(function(x){s+=x.marker+x.seriesName+': '+x.value.toFixed(2)+'<br/>';});return s;}},legend:{top:0},
+    grid:{left:60,right:40,bottom:40,top:40},
+    xAxis:{type:'category',data:dates},yAxis:{type:'value',name:'销售额'},series:series
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function chartB4(){
+  var dates = DATA.calibreB.groupDaily.map(x=>x.date);
+  var series = [
+    {name:'高杰',data:DATA.calibreB.gaojieDaily.map(x=>x.completion)},
+    {name:'郑春燕',data:DATA.calibreB.zhengchunyanDaily.map(x=>x.completion)},
+    {name:'张志鹏',data:DATA.calibreB.zhangzhipengDaily.map(x=>x.completion)},
+    {name:'李燕',data:DATA.calibreB.liyanDaily.map(x=>x.completion)}
+  ].map(s=>({...s,type:'line',smooth:true}));
+  var ec = echarts.init(document.getElementById('chartB4'));
+  ec.setOption({
+    tooltip:{trigger:'axis',formatter:function(p){var s=p[0].axisValue+'<br/>';p.forEach(x=>{s+=x.marker+x.seriesName+': '+(x.value*100).toFixed(1)+'%<br/>';});return s;}},
+    legend:{top:0},
+    grid:{left:60,right:40,bottom:40,top:40},
+    xAxis:{type:'category',data:dates},yAxis:{type:'value',name:'完成率',axisLabel:{formatter:function(v){return (v*100).toFixed(0)+'%';}}},
+    series:series,markLine:{symbol:'none',data:[{yAxis:1}],lineStyle:{color:'#52c41a',type:'dashed'}}
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function chartB5(){
+  var pct = DATA.calibreB.monthPct;
+  var ec = echarts.init(document.getElementById('chartB5'));
+  ec.setOption({
+    series:[{
+      type:'pie',radius:['62%','82%'],center:['50%','50%'],startAngle:90,silent:true,
+      label:{show:false},labelLine:{show:false},
+      data:[
+        {value:pct, name:'已完成', itemStyle:{color:'#1890ff'}},
+        {value:100-pct, name:'剩余', itemStyle:{color:'#f0f0f0'}}
+      ]
+    }],
+    graphic:[
+      {type:'text', left:'center', top:'38%', style:{text:pct.toFixed(2)+'%', fontSize:42, fontWeight:'bold', fill:'#1890ff', textAlign:'center'}},
+      {type:'text', left:'center', top:'60%', style:{text:'月利润目标完成度', fontSize:14, fill:'#999', textAlign:'center'}},
+      {type:'text', left:'center', top:'70%', style:{text:'本月累计 '+(DATA.calibreB.monthCumProfitCNY/10000).toFixed(2)+' 万 CNY / 月利润目标 50万', fontSize:11, fill:'#bbb', textAlign:'center'}}
+    ]
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function chartB6(){
+  var persons = ['高杰','郑春燕','张志鹏','李燕'];
+  var totalSales = DATA.calibreB.totalSales, totalProfit = DATA.calibreB.totalProfit;
+  var salesShare = [
+    DATA.calibreB.gaojieDaily.reduce((s,x)=>s+x.sales,0)/totalSales,
+    DATA.calibreB.zhengchunyanDaily.reduce((s,x)=>s+x.sales,0)/totalSales,
+    DATA.calibreB.zhangzhipengDaily.reduce((s,x)=>s+x.sales,0)/totalSales,
+    DATA.calibreB.liyanDaily.reduce((s,x)=>s+x.sales,0)/totalSales
+  ];
+  var profitShare = [
+    DATA.calibreB.gaojieDaily.reduce((s,x)=>s+x.profit,0)/totalProfit,
+    DATA.calibreB.zhengchunyanDaily.reduce((s,x)=>s+x.profit,0)/totalProfit,
+    DATA.calibreB.zhangzhipengDaily.reduce((s,x)=>s+x.profit,0)/totalProfit,
+    DATA.calibreB.liyanDaily.reduce((s,x)=>s+x.profit,0)/totalProfit
+  ];
+  var ec = echarts.init(document.getElementById('chartB6'));
+  ec.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:function(p){var s=p[0].axisValue+'<br/>';p.forEach(x=>{s+=x.marker+x.seriesName+': '+(x.value).toFixed(1)+'%<br/>';});return s;}},
+    legend:{data:['销售额占比','利润占比'],top:0},
+    grid:{left:60,right:40,bottom:40,top:40},
+    xAxis:{type:'category',data:persons},yAxis:{type:'value',axisLabel:{formatter:'{value}%'}},
+    series:[
+      {name:'销售额占比',type:'bar',data:salesShare.map(v=>(v*100).toFixed(2)*1),itemStyle:{color:'#5470c6'},label:{show:true,formatter:function(p){return p.value.toFixed(1)+'%';}}},
+      {name:'利润占比',type:'bar',data:profitShare.map(v=>(v*100).toFixed(2)*1),itemStyle:{color:'#91cc75'},label:{show:true,formatter:function(p){return p.value.toFixed(1)+'%';}}}
+    ]
+  });
+  window.addEventListener('resize',()=>ec.resize());
+}
+
+function renderChartsA(){ chartA1();chartA2();chartA3();chartA4();chartA5();chartATrend();chartA6();chartA7();chartA9(); if(CAT_METRICS.length>0){renderCatFilter();renderCatKpi();renderCatCharts();renderCatTable();} }
+function renderChartsB(){ chartB1();chartB2();chartB3();chartB4();chartB5();chartB6(); }
+
+var WORK_CONTENT = [{"name":"王超超","role":"文员","items":[{"cat":"上周利润统计与周报","desc":"完成上周利润统计并输出周报。","tags":["report"]},{"cat":"每日利润销量统计","desc":"每日统计利润与销量。","tags":["report"]},{"cat":"优秀链接筛选","desc":"每日筛选优秀链接，整理两个视频和两个图片。","tags":[]},{"cat":"樱花峡谷磁力方块搭建","desc":"完成樱花峡谷磁力方块搭建。","tags":[]},{"cat":"主卖产品价格库存维护","desc":"更新主卖产品价格与库存维护表。","tags":["logistics"]},{"cat":"冗余库存汇总表","desc":"整理冗余库存汇总表。","tags":["logistics"]},{"cat":"秒杀汇总表交接","desc":"完成秒杀汇总表任务交接。","tags":["festival"]},{"cat":"春秋德国发货","desc":"完成春秋德国发货1票。","tags":["logistics"]},{"cat":"发货记录型号表","desc":"制作发货记录产品型号表。","tags":["logistics"]},{"cat":"评论合并与产品信息完善","desc":"完成主体评论合并，并更新产品信息完善表。","tags":[]}]},{"name":"李燕","role":"助理","items":[{"cat":"账户绩效检查","desc":"完成账户绩效检查。","tags":[]},{"cat":"货件跟踪与税单登记","desc":"跟进货件跟踪，上传IEN，收集税单并完成查验登记。","tags":["logistics"]},{"cat":"UK秒杀汇总","desc":"更新UK秒杀情况汇总。","tags":["festival"]},{"cat":"清货广告与冗余汇总","desc":"跟进清货与广告，并汇总冗余情况。","tags":["logistics","ad"]},{"cat":"旺季产品数据汇总","desc":"汇总旺季产品数据。","tags":["report"]},{"cat":"德国103粉预留调查","desc":"开Case调查德国103粉预留数量。","tags":["logistics"]},{"cat":"熔岩磁力方块A+上传","desc":"上传熔岩磁力方块A+。","tags":[]},{"cat":"发货与报关","desc":"完成致和DE103、致新键鼠、春秋蜡烛灯发货及报关。","tags":["logistics"]},{"cat":"春秋UK翻新改价","desc":"完成春秋UK所有翻新产品改价。","tags":[]},{"cat":"UK变体关系重组","desc":"修改并重组UK链接变体关系。","tags":[]}]},{"name":"郑春燕","role":"运营","items":[{"cat":"DE遥控茶灯圣诞推广","desc":"DE遥控茶灯：万圣节广告已关闭，重点转向圣诞节推广，保留少量广告稳定产品词位置。","tags":["ad","festival"]},{"cat":"DE茶灯圣诞推广与圣诞蜡广告","desc":"DE茶灯组合：遥控茶灯、圣诞、充电茶灯万圣节广告已关闭，重点转向圣诞节推广，少量广告稳定茶灯产品词；新增圣诞蜡广告，主攻圣诞方向。","tags":["ad","festival"]},{"cat":"FR茶灯圣诞推广与圣诞蜡广告","desc":"FR茶灯组合：遥控茶灯、圣诞、充电茶灯万圣节广告已关闭，重点转向圣诞节推广，少量广告稳定茶灯产品词；新增圣诞蜡广告，主攻圣诞方向。","tags":["ad","festival"]},{"cat":"DE充电茶灯产品词与圣诞词推广","desc":"DE充电茶灯：万圣节推广已全部关闭，加大产品词推广，目前主要位于第二、第三页，目标11月10日推至第一页；圣诞方向词以低价和关联广告为主。","tags":["ad","festival"]},{"cat":"DE圣诞蜡价格与关键词推广","desc":"DE圣诞蜡：市场竞争卷价格，已出现30支18.99超低价，采取降价推广加错关键词推广，并拓展其他站点流量词。","tags":["ad","festival"]},{"cat":"FR圣诞蜡圣诞词推排名","desc":"FR圣诞蜡：广告主要投放圣诞相关词，已出现自然位，多位于第三页，目标大促前推至第一页。","tags":["ad","festival"]},{"cat":"ES圣诞蜡圣诞词推排名","desc":"ES圣诞蜡：广告主要投放圣诞相关词，已出现自然位，多位于第三页，目标大促前推至第一页。","tags":["ad","festival"]},{"cat":"DE 6支长杆广告调整","desc":"DE 6支长杆：链接开始销售新供应商货，重新调整广告，关键词集中在长杆产品词和圣诞装饰。","tags":["ad","festival"]},{"cat":"充电茶灯FR/ES广告跟进","desc":"充电茶灯FR/ES：广告跟进与调整，原内容未详述。","tags":["ad"]},{"cat":"清理产品价格与广告调整","desc":"清理产品：致和键鼠降低价格并调整广告；TM004降价、参加活动并投放广告小词；魔法棒正常售卖；火烈鸟犬吠器和翻译耳机采用低价折扣加低价广告；KF007键鼠保持正常动销，维持相对低价加价格折扣。","tags":["ad","logistics"]}]},{"name":"张志鹏","role":"运营","items":[{"cat":"轨道火车英国秒杀恢复","desc":"轨道火车英国站已恢复秒杀资格，等货到后开始跑秒杀。","tags":["festival","logistics"]},{"cat":"轨道火车欧洲转化观察","desc":"轨道火车欧洲站点已跑出数据，有曝光但转化低，初步怀疑价格问题，已调至相对低价继续观察转化率。","tags":["ad"]},{"cat":"轨道火车欧洲广告搭建","desc":"轨道火车欧洲计划推广DE、IT、ES，DE和IT广告框架已设置，广告组已添加视频广告及ASIN定投，后续继续调整细节。","tags":["ad"]},{"cat":"打孔幕布欧洲清货与DOTD","desc":"打孔幕布欧洲站点月度仓储费过高，需促销降价清货；法国站已申报下周DOTD，其余站点暂无申报资格，下周打Coupon对比市场清货。","tags":["logistics","festival"]}]}];
+var TEAM_WORK = {"name":"小组工作事项","items":[{"cat":"冗余库存分类","desc":"完成冗余库存分类。","tags":["logistics"]},{"cat":"手写板清货XZ方案","desc":"安排手写板清货XZ方案。","tags":["logistics"]},{"cat":"幕布与轨道车促销推广跟进","desc":"跟进幕布与轨道车促销及推广情况。","tags":["ad","festival"]},{"cat":"充电蜡烛灯/100pc磁力方块/M01鼠标推广调整","desc":"推进充电蜡烛灯、100pc磁力方块、M01鼠标的推广与调整。","tags":["ad"]},{"cat":"子体合并与链接变体处理","desc":"合并单独子体，处理整体链接变体情况。","tags":[]},{"cat":"英国冗余翻新产品低价处理","desc":"低价处理英国冗余翻新产品。","tags":["logistics"]},{"cat":"长期仓储费库存处理","desc":"处理长期仓储费库存。","tags":["logistics"]},{"cat":"蜡烛灯/磁力方块推广与KF10/M01降广告","desc":"调整蜡烛灯、磁力方块推广广告，并降低KF10键鼠、M01鼠标广告。","tags":["ad"]},{"cat":"欧洲蜡烛灯推进与西班牙第一目标","desc":"推进欧洲蜡烛灯，目标西班牙蜡烛灯排名第一。","tags":["ad"]}]};
+var TAG_LABELS = { '':'默认', ad:'广告', logistics:'物流', festival:'节日营销', report:'汇报' };
+
+function workTagHtml(it){
+  var tags = (it.tags && it.tags.length) ? it.tags : [''];
+  return tags.map(function(t){
+    return '<span class="work-tag'+(t?' '+t:'')+'">'+(TAG_LABELS[t]||'默认')+'</span>';
+  }).join('');
+}
+
+function renderWorkContent(){
+  var html = '';
+  WORK_CONTENT.forEach(function(p){
+    html += '<div class="work-col">';
+    html += '<div class="work-col-header">'+p.name+'<span class="role">'+(p.role||'运营')+'</span><span class="count">'+p.items.length+' 项</span></div>';
+    p.items.forEach(function(it, i){
+      html += '<div class="work-item"><div class="work-item-idx">'+(i+1)+'</div><div class="work-item-main">';
+      html += '<div class="work-item-cat">'+it.cat+workTagHtml(it)+'</div>';
+      html += '<div class="work-item-desc">'+it.desc+'</div>';
+      html += '</div></div>';
+    });
+    html += '</div>';
+  });
+  document.getElementById('workGrid').innerHTML = html;
+
+  // 小组工作事项：单独一行，位于成员四列之上
+  if (TEAM_WORK && TEAM_WORK.items && TEAM_WORK.items.length) {
+    var tHtml = '<div class="work-team">';
+    tHtml += '<div class="work-team-header">'+TEAM_WORK.name+'<span class="count">'+TEAM_WORK.items.length+' 项</span></div>';
+    tHtml += '<div class="work-team-items">';
+    TEAM_WORK.items.forEach(function(it, i){
+      tHtml += '<div class="work-item"><div class="work-item-idx">'+(i+1)+'</div><div class="work-item-main">';
+      tHtml += '<div class="work-item-cat">'+it.cat+workTagHtml(it)+'</div>';
+      tHtml += '<div class="work-item-desc">'+it.desc+'</div>';
+      tHtml += '</div></div>';
+    });
+    tHtml += '</div></div>';
+    document.getElementById('teamWorkBox').innerHTML = tHtml;
+  }
+}
+
+renderKpiA(); renderChartsA();
+
+</script>
+</body>
+</html>
